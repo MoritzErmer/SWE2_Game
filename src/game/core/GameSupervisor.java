@@ -3,12 +3,15 @@ package game.core;
 import game.logistics.ConveyorBelt;
 import game.logistics.LogisticsThread;
 import game.logistics.TransportRobot;
+import game.machine.Direction;
 import game.machine.BaseMachine;
+import game.world.Tile;
 import game.world.WorldMap;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -38,13 +41,14 @@ public class GameSupervisor {
    // Speichert ScheduledFuture pro Maschine für gezieltes Abmelden
    // (Dekonstruktion)
    private final Map<BaseMachine, ScheduledFuture<?>> machineFutures = new ConcurrentHashMap<>();
+   private final Map<String, ConveyorBelt> beltIndex = new ConcurrentHashMap<>();
 
    public GameSupervisor(WorldMap map, List<BaseMachine> machines,
          List<ConveyorBelt> belts, List<TransportRobot> robots) {
       this.map = map;
-      this.machines = machines;
-      this.belts = belts;
-      this.robots = robots;
+      this.machines = new CopyOnWriteArrayList<>(machines);
+      this.belts = new CopyOnWriteArrayList<>(belts);
+      this.robots = new CopyOnWriteArrayList<>(robots);
       this.machineExecutor = Executors.newScheduledThreadPool(
             Runtime.getRuntime().availableProcessors());
       this.logisticsExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -57,7 +61,11 @@ public class GameSupervisor {
          t.setDaemon(true);
          return t;
       });
-      this.collisionHandler = new CollisionHandler(robots);
+      this.collisionHandler = new CollisionHandler(this.robots);
+
+      for (ConveyorBelt belt : this.belts) {
+         beltIndex.put(beltKey(belt.getX(), belt.getY()), belt);
+      }
    }
 
    public void start() {
@@ -95,7 +103,9 @@ public class GameSupervisor {
     * Task.
     */
    public void registerMachine(BaseMachine machine) {
-      machines.add(machine);
+      if (!machines.contains(machine)) {
+         machines.add(machine);
+      }
       if (running.get()) {
          ScheduledFuture<?> future = machineExecutor.scheduleAtFixedRate(() -> {
             try {
@@ -119,6 +129,57 @@ public class GameSupervisor {
          future.cancel(false);
       }
       System.out.println("[GameSupervisor] Maschine abgemeldet: " + machine.getName());
+   }
+
+   public void registerBelt(int x, int y, Direction machineDirection) {
+      if (!map.inBounds(x, y)) {
+         return;
+      }
+
+      String key = beltKey(x, y);
+      if (beltIndex.containsKey(key)) {
+         return;
+      }
+
+      Tile tile = map.getTile(x, y);
+      ConveyorBelt.Direction direction = toBeltDirection(machineDirection);
+      ConveyorBelt belt = new ConveyorBelt(tile, x, y, direction);
+      belts.add(belt);
+      beltIndex.put(key, belt);
+      System.out.println("[GameSupervisor] Belt registriert bei (" + x + "," + y + ") " + direction);
+   }
+
+   public void deregisterBelt(int x, int y) {
+      String key = beltKey(x, y);
+      ConveyorBelt belt = beltIndex.remove(key);
+      if (belt == null) {
+         return;
+      }
+
+      belts.remove(belt);
+      Tile tile = map.getTile(x, y);
+      tile.getLock().lock();
+      try {
+         if (tile.getType() == game.world.TileType.CONVEYOR_BELT) {
+            tile.setType(game.world.TileType.EMPTY);
+         }
+      } finally {
+         tile.getLock().unlock();
+      }
+      System.out.println("[GameSupervisor] Belt abgemeldet bei (" + x + "," + y + ")");
+   }
+
+   public void registerRobot(TransportRobot robot) {
+      if (!robots.contains(robot)) {
+         robots.add(robot);
+      }
+      if (running.get()) {
+         robotExecutor.submit(robot);
+      }
+   }
+
+   public void deregisterRobot(TransportRobot robot) {
+      robots.remove(robot);
    }
 
    /**
@@ -146,10 +207,32 @@ public class GameSupervisor {
    }
 
    public List<BaseMachine> getMachines() {
-      return machines;
+      return Collections.unmodifiableList(machines);
    }
 
    public List<TransportRobot> getRobots() {
-      return robots;
+      return Collections.unmodifiableList(robots);
+   }
+
+   public List<ConveyorBelt> getBelts() {
+      return Collections.unmodifiableList(belts);
+   }
+
+   private String beltKey(int x, int y) {
+      return x + ":" + y;
+   }
+
+   private ConveyorBelt.Direction toBeltDirection(Direction direction) {
+      switch (direction) {
+         case UP:
+            return ConveyorBelt.Direction.UP;
+         case DOWN:
+            return ConveyorBelt.Direction.DOWN;
+         case LEFT:
+            return ConveyorBelt.Direction.LEFT;
+         case RIGHT:
+         default:
+            return ConveyorBelt.Direction.RIGHT;
+      }
    }
 }

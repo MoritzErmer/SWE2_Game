@@ -48,18 +48,10 @@ public class LogisticsThread implements Runnable {
          return;
 
       ConveyorBelt.Direction dir = belt.getDirection();
-      // Berechne Ziel-Koordinaten (wir brauchen x,y des Belts → suche im Grid)
-      for (int x = 0; x < map.getWidth(); x++) {
-         for (int y = 0; y < map.getHeight(); y++) {
-            if (map.getTile(x, y) == source) {
-               int tx = x + dir.dx;
-               int ty = y + dir.dy;
-               if (map.inBounds(tx, ty)) {
-                  map.transferItem(source, map.getTile(tx, ty));
-               }
-               return;
-            }
-         }
+      int tx = belt.getX() + dir.dx;
+      int ty = belt.getY() + dir.dy;
+      if (map.inBounds(tx, ty)) {
+         map.transferItem(source, map.getTile(tx, ty));
       }
    }
 }

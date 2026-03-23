@@ -9,8 +9,12 @@ import game.ui.GameUI;
 import game.world.WorldMap;
 
 import javax.swing.*;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Hauptklasse des Spiels. Initialisiert alle Komponenten und startet die
@@ -28,6 +32,16 @@ import java.util.List;
 public class Main {
 
    public static void main(String[] args) {
+      installGlobalErrorHandler();
+      try {
+         runGame();
+      } catch (Throwable t) {
+         handleFatalError("Fatal error during startup", t);
+         System.exit(1);
+      }
+   }
+
+   private static void runGame() {
       // --- Welt erstellen ---
       final int MAP_WIDTH = 120;
       final int MAP_HEIGHT = 80;
@@ -38,9 +52,9 @@ public class Main {
       PlayerCharacter player = new PlayerCharacter(MAP_WIDTH / 2, MAP_HEIGHT / 2);
 
       // --- Maschinen, Belts, Roboter (initial leer, werden im Spiel platziert) ---
-      List<BaseMachine> machines = new ArrayList<>();
-      List<ConveyorBelt> belts = new ArrayList<>();
-      List<TransportRobot> robots = new ArrayList<>();
+      List<BaseMachine> machines = new CopyOnWriteArrayList<>();
+      List<ConveyorBelt> belts = new CopyOnWriteArrayList<>();
+      List<TransportRobot> robots = new CopyOnWriteArrayList<>();
 
       // --- Game Supervisor erstellen ---
       GameSupervisor supervisor = new GameSupervisor(map, machines, belts, robots);
@@ -62,6 +76,16 @@ public class Main {
             System.out.println("[Main] Maschine abgemeldet: " + machine.getName());
          });
 
+         ui.setOnBeltPlaced(placement -> {
+            supervisor.registerBelt(placement.getX(), placement.getY(), placement.getDirection());
+            System.out.println("[Main] Belt registriert bei (" + placement.getX() + "," + placement.getY() + ")");
+         });
+
+         ui.setOnBeltRemoved((x, y) -> {
+            supervisor.deregisterBelt(x, y);
+            System.out.println("[Main] Belt abgemeldet bei (" + x + "," + y + ")");
+         });
+
          // Shutdown-Hook: Sicheres Beenden bei Fenster-Schließen
          ui.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
@@ -77,5 +101,48 @@ public class Main {
       System.out.println("=== 2D Automation Game gestartet ===");
       System.out.println("Steuerung: WASD=Bewegen, 1=Miner, 2=Smelter, E=Item aufheben");
       System.out.println("Karte: " + MAP_WIDTH + "x" + MAP_HEIGHT + " Tiles");
+   }
+
+   private static void installGlobalErrorHandler() {
+      Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+         String source = "Uncaught exception in thread " + thread.getName();
+         handleFatalError(source, throwable);
+      });
+   }
+
+   private static void handleFatalError(String source, Throwable throwable) {
+      String appData = System.getenv("APPDATA");
+      Path logDir = (appData == null || appData.isBlank())
+            ? Path.of("logs")
+            : Path.of(appData, "SWE2-Game");
+      Path logFile = logDir.resolve("error.log");
+
+      try {
+         Files.createDirectories(logDir);
+         String entry = java.time.Instant.now() + " | " + source + System.lineSeparator()
+               + throwable + System.lineSeparator();
+
+         for (StackTraceElement element : throwable.getStackTrace()) {
+            entry += "    at " + element + System.lineSeparator();
+         }
+         entry += System.lineSeparator();
+
+         Files.writeString(
+               logFile,
+               entry,
+               StandardOpenOption.CREATE,
+               StandardOpenOption.APPEND);
+      } catch (IOException ioEx) {
+         System.err.println("Failed to write error log: " + ioEx.getMessage());
+      }
+
+      System.err.println(source + ": " + throwable.getMessage());
+      throwable.printStackTrace(System.err);
+
+      SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+            null,
+            "A fatal error occurred. See log: " + logFile.toAbsolutePath(),
+            "SWE2 Game Error",
+            JOptionPane.ERROR_MESSAGE));
    }
 }

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd /c \"java -version\")",
+      "Bash(cmd /c \"javac -version\")",
+      "Bash(cmd /c \"mvn -version\")",
+      "Bash(powershell -Command \"& { java -version; javac -version }\" 2>&1)",
+      "Bash(powershell -Command \"Get-Command java -ErrorAction SilentlyContinue; [System.Environment]::GetEnvironmentVariable\\('JAVA_HOME', 'Machine'\\); [System.Environment]::GetEnvironmentVariable\\('JAVA_HOME', 'User'\\); ls 'C:\\\\Program Files\\\\Java' -ErrorAction SilentlyContinue; ls 'C:\\\\Program Files\\\\Eclipse Adoptium' -ErrorAction SilentlyContinue; ls 'C:\\\\Program Files\\\\Microsoft' | Where Name -match 'jdk' -ErrorAction SilentlyContinue\")"
+    ]
+  }
+}

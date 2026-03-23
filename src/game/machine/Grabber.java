@@ -235,7 +235,6 @@ public class Grabber extends BaseMachine {
    }
 
    /**
-    * /**
     * Sortiert drei Tiles nach identityHashCode für Deadlock-freies Locking.
     */
    private Tile[] sortByHash(Tile a, Tile b, Tile c) {

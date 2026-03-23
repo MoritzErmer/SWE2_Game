@@ -1,0 +1,49 @@
+name: Release Gate
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  validate-and-package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Verify toolchain
+        shell: pwsh
+        run: ./scripts/verify-jdk17.ps1
+
+      - name: Documentation consistency
+        shell: pwsh
+        run: ./scripts/check-doc-consistency.ps1
+
+      - name: Version/artifact consistency
+        shell: pwsh
+        run: ./scripts/check-version-artifacts.ps1
+
+      - name: Run test suite
+        shell: pwsh
+        run: mvn clean test
+
+      - name: Build EXE
+        shell: pwsh
+        run: ./scripts/package-exe.ps1
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: swe2-game-dist
+          path: dist/**

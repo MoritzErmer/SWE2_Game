@@ -9,6 +9,8 @@ import game.world.TileType;
  */
 public class ConveyorBelt {
    private final Tile tile;
+   private final int x;
+   private final int y;
    private final Direction direction;
 
    public enum Direction {
@@ -22,8 +24,10 @@ public class ConveyorBelt {
       }
    }
 
-   public ConveyorBelt(Tile tile, Direction direction) {
+   public ConveyorBelt(Tile tile, int x, int y, Direction direction) {
       this.tile = tile;
+      this.x = x;
+      this.y = y;
       this.direction = direction;
       tile.setType(TileType.CONVEYOR_BELT);
    }
@@ -32,7 +36,16 @@ public class ConveyorBelt {
       return tile;
    }
 
+   public int getX() {
+      return x;
+   }
+
+   public int getY() {
+      return y;
+   }
+
    public Direction getDirection() {
       return direction;
    }
 }
+

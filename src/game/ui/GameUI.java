@@ -17,6 +17,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.util.function.BiConsumer;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -39,6 +40,7 @@ public class GameUI extends JFrame {
    private final PlayerCharacter player;
    private final GamePanel gamePanel;
    private Consumer<BaseMachine> onMachinePlaced;
+   private Consumer<BeltPlacement> onBeltPlaced;
 
    // Pixel-Art Texturen (8x8 → skaliert auf TILE_SIZE)
    private final PixelTextures textures;
@@ -60,6 +62,31 @@ public class GameUI extends JFrame {
 
    // Callback für Maschinen-Deconstruction (deregistrieren)
    private java.util.function.Consumer<BaseMachine> onMachineRemoved;
+   private BiConsumer<Integer, Integer> onBeltRemoved;
+
+   public static final class BeltPlacement {
+      private final int x;
+      private final int y;
+      private final game.machine.Direction direction;
+
+      public BeltPlacement(int x, int y, game.machine.Direction direction) {
+         this.x = x;
+         this.y = y;
+         this.direction = direction;
+      }
+
+      public int getX() {
+         return x;
+      }
+
+      public int getY() {
+         return y;
+      }
+
+      public game.machine.Direction getDirection() {
+         return direction;
+      }
+   }
 
    // ==================== ROTATION & DECONSTRUCTION ====================
 
@@ -95,8 +122,16 @@ public class GameUI extends JFrame {
       Tile tile = map.getTile(player.getX(), player.getY());
       tile.getLock().lock();
       try {
-         if (!tile.hasMachine())
+         if (!tile.hasMachine()) {
+            if (tile.getType() == TileType.CONVEYOR_BELT) {
+               tile.setType(TileType.EMPTY);
+               player.addItem(ItemType.CONVEYOR_BELT_ITEM, 1);
+               if (onBeltRemoved != null) {
+                  onBeltRemoved.accept(player.getX(), player.getY());
+               }
+            }
             return;
+         }
          BaseMachine machine = tile.getMachine();
          // Füge das passende Kit-Item ins Inventar zurück
          if (machine instanceof Miner) {
@@ -121,6 +156,14 @@ public class GameUI extends JFrame {
     */
    public void setOnMachineRemoved(java.util.function.Consumer<BaseMachine> callback) {
       this.onMachineRemoved = callback;
+   }
+
+   public void setOnBeltPlaced(Consumer<BeltPlacement> callback) {
+      this.onBeltPlaced = callback;
+   }
+
+   public void setOnBeltRemoved(BiConsumer<Integer, Integer> callback) {
+      this.onBeltRemoved = callback;
    }
 
    // Mining state
@@ -215,7 +258,49 @@ public class GameUI extends JFrame {
                   break;
                case KeyEvent.VK_R:
                   // R rotiert Maschine auf aktuellem Tile (falls vorhanden)
+                  rotateMachineOnPlayerTile();
+                  break;
+               case KeyEvent.VK_Q:
+                  // Q dekonstruiert Maschine auf aktuellem Tile
+                  deconstructMachineOnPlayerTile();
+                  break;
+            }
+         }
+
+         @Override
+         public void keyReleased(KeyEvent e) {
+            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+               cancelMining();
+            }
+         }
+      });
+
+      gamePanel.addMouseListener(new MouseAdapter() {
+         @Override
+         public void mousePressed(MouseEvent e) {
+            int tx = (e.getX() + cameraX) / TILE_SIZE;
+            int ty = (e.getY() + cameraY) / TILE_SIZE;
+            if (!map.inBounds(tx, ty))
+               return;
+            if (SwingUtilities.isLeftMouseButton(e)) {
+               placeItemOnTile(tx, ty);
+            } else if (SwingUtilities.isRightMouseButton(e)) {
+               interactWithMachine(tx, ty);
+            }
+         }
+      });
+
+      // FPS-Timer: repaint + Mining-Check + Kamera-Update
+      Timer timer = new Timer(1000 / TARGET_FPS, evt -> {
+         updateCamera();
+         checkMiningComplete();
+         gamePanel.repaint();
+      });
+      timer.start();
+
+      // Frame sichtbar machen und Fokus fuer Tastatursteuerung setzen.
       setVisible(true);
+      SwingUtilities.invokeLater(() -> gamePanel.requestFocusInWindow());
    }
 
    /** Zentriert die Kamera auf den Spieler, clampt an Kartenränder. */
@@ -378,6 +463,9 @@ public class GameUI extends JFrame {
                return;
             if (player.consumeSelectedItem(1)) {
                tile.setType(TileType.CONVEYOR_BELT);
+               if (onBeltPlaced != null) {
+                  onBeltPlaced.accept(new BeltPlacement(tx, ty, lastDirection));
+               }
             }
             return;
          }
@@ -902,67 +990,6 @@ public class GameUI extends JFrame {
          if (machine instanceof Smelter)
             return textures.getRotated("smelter", machine.getDirection());
          return null;
-      }
-      // ==================== ROTATION & DECONSTRUCTION ====================
-
-      /**
-       * Rotiere Maschine auf Spieler-Tile (falls vorhanden und rotierbar).
-       */
-      private void rotateMachineOnPlayerTile() {
-         Tile tile = map.getTile(player.getX(), player.getY());
-         tile.getLock().lock();
-         try {
-            if (!tile.hasMachine())
-               return;
-            BaseMachine machine = tile.getMachine();
-            // Nur Greifer, Miner, Smelter rotierbar
-            if (machine instanceof Grabber) {
-               ((Grabber) machine).rotate();
-               machine.setDirection(
-                     game.machine.Direction.fromDxDy(((Grabber) machine).getDestDx(), ((Grabber) machine).getDestDy()));
-            } else {
-               // Miner/Smelter: Richtung rotieren
-               machine.setDirection(machine.getDirection().rotateClockwise());
-            }
-         } finally {
-            tile.getLock().unlock();
-         }
-      }
-
-      /**
-       * Dekonstruiert (baut ab) die Maschine auf dem Spieler-Tile, gibt das Kit-Item
-       * zurück.
-       */
-      private void deconstructMachineOnPlayerTile() {
-         Tile tile = map.getTile(player.getX(), player.getY());
-         tile.getLock().lock();
-         try {
-            if (!tile.hasMachine())
-               return;
-            BaseMachine machine = tile.getMachine();
-            // Füge das passende Kit-Item ins Inventar zurück
-            if (machine instanceof Miner) {
-               player.addItem(ItemType.MINER_KIT, 1);
-            } else if (machine instanceof Smelter) {
-               player.addItem(ItemType.SMELTER_KIT, 1);
-            } else if (machine instanceof Grabber) {
-               player.addItem(ItemType.GRABBER_KIT, 1);
-            } else {
-               return;
-            }
-            tile.removeMachine();
-            if (onMachineRemoved != null)
-               onMachineRemoved.accept(machine);
-         } finally {
-            tile.getLock().unlock();
-         }
-      }
-
-      /**
-       * Setzt Callback für Maschinen-Deconstruction (deregistrieren im Supervisor).
-       */
-      public void setOnMachineRemoved(java.util.function.Consumer<BaseMachine> callback) {
-         this.onMachineRemoved = callback;
       }
 
       private BufferedImage getItemTexture(ItemType type) {
