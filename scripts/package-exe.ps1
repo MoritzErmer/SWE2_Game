@@ -93,7 +93,7 @@ Write-Host "[package-exe] Erstelle minimale JRE mit jlink ..."
 & jlink `
     --no-header-files `
     --no-man-pages `
-    --compress zip-6 `
+    --compress=2 `
     --strip-debug `
     --add-modules $modules `
     --output $runtimeDir
