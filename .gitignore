@@ -1,0 +1,19 @@
+# Maven build output
+target/
+dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code — local AI assistant state
+# CLAUDE.md is intentionally NOT ignored (project-level instructions, useful for collaborators)
+.claude/
