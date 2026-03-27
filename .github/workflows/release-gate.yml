@@ -10,6 +10,7 @@ on:
 jobs:
   validate-and-package:
     runs-on: windows-latest
+    timeout-minutes: 20
     permissions:
       contents: write   # required for creating/updating GitHub Releases and tags
 
@@ -26,7 +27,13 @@ jobs:
 
       - name: Install WiX Toolset 3.x
         shell: pwsh
-        run: choco upgrade wixtoolset --yes --no-progress
+        run: |
+          choco upgrade wixtoolset --yes --no-progress
+          $wixBin = (Get-ChildItem "C:\Program Files (x86)\WiX Toolset*\bin" `
+                      -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          if (-not $wixBin) { throw "WiX bin directory not found after installation." }
+          Add-Content $env:GITHUB_PATH $wixBin
+          Write-Host "[wix] Registered in GITHUB_PATH: $wixBin"
 
       - name: Verify toolchain
         shell: pwsh
@@ -52,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: swe2-game-dist
-          path: dist/**
+          path: dist/*.exe
 
       - name: Publish GitHub Release (rolling latest)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

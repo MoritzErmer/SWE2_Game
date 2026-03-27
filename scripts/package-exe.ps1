@@ -1,7 +1,6 @@
 param(
     [string]$AppVersion,
-    [string]$Vendor = "DHBW Stuttgart",
-    [int]$PackageTimeoutSeconds = 300
+    [string]$Vendor = "DHBW Stuttgart"
 )
 
 $ErrorActionPreference = "Stop"
@@ -75,13 +74,18 @@ New-Item -ItemType Directory -Path $outDir | Out-Null
 Write-Host "[package-exe] Analysiere Java-Module mit jdeps ..."
 $jdepsOutput = & jdeps --print-module-deps --ignore-missing-deps $jarPath 2>$null
 # jdeps gibt mehrzeilige Ausgabe; die letzte nicht-leere Zeile enthaelt die Modulliste
-$modules = ($jdepsOutput | Where-Object { $_ -match '\S' } | Select-Object -Last 1).Trim()
-if ([string]::IsNullOrWhiteSpace($modules)) {
-    $modules = "java.base,java.desktop,java.logging,java.management"
-    Write-Warning "[package-exe] jdeps lieferte kein Ergebnis — Fallback-Module: $modules"
-} else {
-    Write-Host "[package-exe] Erforderliche Module: $modules"
+$jdepsModules = ($jdepsOutput | Where-Object { $_ -match '\S' } | Select-Object -Last 1).Trim()
+if ([string]::IsNullOrWhiteSpace($jdepsModules)) {
+    Write-Warning "[package-exe] jdeps lieferte kein Ergebnis — nur Baseline-Module werden verwendet."
 }
+
+# Mandatory baseline: always required for this Swing application.
+# jdeps with --ignore-missing-deps can miss runtime modules like java.logging
+# (used via java.util.logging.Logger in Main.java).
+$baseline = @("java.base", "java.desktop", "java.logging", "java.management")
+$detected = if (-not [string]::IsNullOrWhiteSpace($jdepsModules)) { $jdepsModules -split "," } else { @() }
+$modules = ($baseline + $detected | Sort-Object -Unique) -join ","
+Write-Host "[package-exe] Module (baseline + jdeps): $modules"
 
 # --- jlink: minimale JRE erstellen ---
 $runtimeDir = Join-Path $outDir "runtime"
@@ -89,7 +93,7 @@ Write-Host "[package-exe] Erstelle minimale JRE mit jlink ..."
 & jlink `
     --no-header-files `
     --no-man-pages `
-    --compress=2 `
+    --compress zip-6 `
     --strip-debug `
     --add-modules $modules `
     --output $runtimeDir
@@ -100,35 +104,31 @@ $runtimeSizeMB = "{0:N1}" -f ((Get-ChildItem $runtimeDir -Recurse | Measure-Obje
 Write-Host "[package-exe] Minimale JRE erstellt: $runtimeDir ($runtimeSizeMB MB)"
 
 # --- jpackage: Windows-EXE-Installer mit gebundeler JRE ---
+# Note: Start-Process does not auto-quote array values that contain spaces.
+# All values that may contain spaces are wrapped in escaped double-quotes explicitly.
+$inputDir = Join-Path $PSScriptRoot "..\target"
 $jpackageArgs = @(
-    "--type", "exe",
-    "--name", "SWE2-Game",
-    "--input", (Join-Path $PSScriptRoot "..\target"),
-    "--main-jar", $jarName,
-    "--main-class", "game.Main",
-    "--dest", $outDir,
-    "--vendor", $Vendor,
-    "--app-version", $AppVersion,
-    "--runtime-image", $runtimeDir,
+    "--type",           "exe",
+    "--name",           "SWE2-Game",
+    "--input",          "`"$inputDir`"",
+    "--main-jar",       $jarName,
+    "--main-class",     "game.Main",
+    "--dest",           "`"$outDir`"",
+    "--vendor",         "`"$Vendor`"",
+    "--app-version",    $AppVersion,
+    "--runtime-image",  "`"$runtimeDir`"",
     "--win-shortcut",
     "--win-menu",
     "--win-dir-chooser"
 )
 
-Write-Host "[package-exe] Running jpackage (timeout: $PackageTimeoutSeconds sec) ..."
-$proc = Start-Process -FilePath "jpackage" -ArgumentList $jpackageArgs -PassThru -NoNewWindow
-
-if (-not $proc.WaitForExit($PackageTimeoutSeconds * 1000)) {
-    try {
-        $proc.Kill()
-    } catch {
-        Write-Warning "Failed to kill timed-out jpackage process."
-    }
-    throw "jpackage timed out after $PackageTimeoutSeconds seconds."
-}
-
-if ($proc.ExitCode -ne 0) {
-    throw "jpackage failed with exit code $($proc.ExitCode)."
+# Direct invocation via & operator: output (including jpackage error messages) streams
+# natively to the console / GitHub Actions log. Timeout is enforced at the job level
+# (timeout-minutes: 20 in release-gate.yml).
+Write-Host "[package-exe] Running jpackage ..."
+& jpackage @jpackageArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "jpackage failed with exit code $LASTEXITCODE."
 }
 
 $exeFile = Get-ChildItem -Path $outDir -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
