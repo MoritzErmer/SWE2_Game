@@ -104,19 +104,19 @@ $runtimeSizeMB = "{0:N1}" -f ((Get-ChildItem $runtimeDir -Recurse | Measure-Obje
 Write-Host "[package-exe] Minimale JRE erstellt: $runtimeDir ($runtimeSizeMB MB)"
 
 # --- jpackage: Windows-EXE-Installer mit gebundeler JRE ---
-# Note: Start-Process does not auto-quote array values that contain spaces.
-# All values that may contain spaces are wrapped in escaped double-quotes explicitly.
+# & operator + splatting (@array) passes each element as a separate argument.
+# PowerShell automatically quotes values that contain spaces — no manual escaping needed.
 $inputDir = Join-Path $PSScriptRoot "..\target"
 $jpackageArgs = @(
     "--type",           "exe",
     "--name",           "SWE2-Game",
-    "--input",          "`"$inputDir`"",
+    "--input",          $inputDir,
     "--main-jar",       $jarName,
     "--main-class",     "game.Main",
-    "--dest",           "`"$outDir`"",
-    "--vendor",         "`"$Vendor`"",
+    "--dest",           $outDir,
+    "--vendor",         $Vendor,
     "--app-version",    $AppVersion,
-    "--runtime-image",  "`"$runtimeDir`"",
+    "--runtime-image",  $runtimeDir,
     "--win-shortcut",
     "--win-menu",
     "--win-dir-chooser"
