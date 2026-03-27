@@ -26,7 +26,7 @@ jobs:
 
       - name: Install WiX Toolset 3.x
         shell: pwsh
-        run: choco install wixtoolset --version 3.14.0.8606 --yes --no-progress
+        run: choco upgrade wixtoolset --yes --no-progress
 
       - name: Verify toolchain
         shell: pwsh
