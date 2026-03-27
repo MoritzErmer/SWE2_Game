@@ -22,6 +22,7 @@ C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\Main.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\save\GameSaveState.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\save\SaveManager.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\ui\GameUI.java
+C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\ui\IsoRenderer.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\ui\MainMenuUI.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\ui\PixelTextures.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\world\Tile.java
