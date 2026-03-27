@@ -140,23 +140,26 @@ public class PixelTextures {
       return buildFromPalette(map, new Color[] { base, dark, coal, glint });
    }
 
-   // --- Conveyor Belt: Graue Streifen mit Richtungspfeilen ---
+   // --- Conveyor Belt: Klarer Richtungspfeil (Basis-Richtung = RIGHT, Pfeil nach rechts) ---
+   // Palette: 0=#444444 (Hintergrund), 1=#888888 (Schiene), 2=#FFFFFF (Pfeil), 3=#AAAAAA (unused)
+   // Das Sprite zeigt nach RECHTS (Standard). getRotated() dreht es für andere Richtungen.
    private BufferedImage generateConveyorBelt() {
-      Color frame = new Color(100, 100, 100);
-      Color belt = new Color(160, 160, 160);
-      Color line = new Color(130, 130, 130);
-      Color arrow = new Color(200, 200, 60);
+      Color bg    = new Color(0x44, 0x44, 0x44);
+      Color rail  = new Color(0x88, 0x88, 0x88);
+      Color arrow = new Color(0xFF, 0xFF, 0xFF);
+      Color spare = new Color(0xAA, 0xAA, 0xAA);
+      // Arrow pointing RIGHT (base direction = RIGHT, matches getRotated convention)
       int[][] map = {
-            { 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 1, 2, 1, 2, 1, 2, 0 },
-            { 0, 2, 1, 2, 1, 2, 1, 0 },
-            { 0, 1, 2, 3, 3, 2, 1, 0 },
-            { 0, 2, 1, 3, 3, 1, 2, 0 },
-            { 0, 1, 2, 1, 2, 1, 2, 0 },
-            { 0, 2, 1, 2, 1, 2, 1, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+            { 1, 0, 0, 2, 0, 0, 0, 1 },
+            { 1, 0, 0, 2, 2, 0, 0, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 0, 0, 2, 2, 0, 0, 1 },
+            { 1, 0, 0, 2, 0, 0, 0, 1 },
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
       };
-      return buildFromPalette(map, new Color[] { frame, belt, line, arrow });
+      return buildFromPalette(map, new Color[] { bg, rail, arrow, spare });
    }
 
    // --- Machine background: Metallplatten-Look ---
@@ -288,24 +291,25 @@ public class PixelTextures {
       return buildFromPalette(map, new Color[] { bg, main, dark, hi });
    }
 
-   // --- Grabber: Greifer mit klarem Richtungspfeil (zeigt nach RECHTS) ---
+   // --- Grabber: Blaue Basis (Eingang), roter/oranger Greiferarm (Ausgang nach RECHTS) ---
+   // Palette: 0=transparent, 1=blue body, 2=dark blue, 3=red/orange tip
    private BufferedImage generateGrabberTexture() {
-      Color bg = new Color(0, 0, 0, 0);
-      Color body = new Color(100, 180, 100);
-      Color dark = new Color(60, 140, 60);
-      Color arrow = new Color(240, 220, 60); // Leuchtend gelber Pfeil für Richtung
-      // Körper links, Pfeil zeigt nach rechts (Standard-Richtung = RIGHT)
+      Color bg   = new Color(0, 0, 0, 0);
+      Color body = new Color(60, 120, 210);   // blue input side
+      Color dark = new Color(40, 80, 160);    // dark blue shading
+      Color tip  = new Color(230, 80, 30);    // red-orange output arm/tip
+      // Body on left (input), arm extends right (output). Base direction = RIGHT.
       int[][] map = {
             { 0, 0, 0, 0, 0, 0, 0, 0 },
             { 0, 2, 1, 1, 0, 0, 0, 0 },
-            { 0, 1, 1, 1, 3, 3, 0, 0 },
+            { 0, 1, 1, 1, 3, 0, 0, 0 },
             { 0, 1, 2, 1, 3, 3, 3, 3 },
             { 0, 1, 2, 1, 3, 3, 3, 3 },
-            { 0, 1, 1, 1, 3, 3, 0, 0 },
+            { 0, 1, 1, 1, 3, 0, 0, 0 },
             { 0, 2, 1, 1, 0, 0, 0, 0 },
             { 0, 0, 0, 0, 0, 0, 0, 0 },
       };
-      return buildFromPalette(map, new Color[] { bg, body, dark, arrow });
+      return buildFromPalette(map, new Color[] { bg, body, dark, tip });
    }
 
    // --- Miner: Nach RECHTS orientiert (Spitzhacke zeigt rechts) ---

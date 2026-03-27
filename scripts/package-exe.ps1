@@ -109,7 +109,7 @@ Write-Host "[package-exe] Minimale JRE erstellt: $runtimeDir ($runtimeSizeMB MB)
 $inputDir = Join-Path $PSScriptRoot "..\target"
 $jpackageArgs = @(
     "--type",           "exe",
-    "--name",           "SWE2-Game",
+    "--name",           "FactoryGame",
     "--input",          $inputDir,
     "--main-jar",       $jarName,
     "--main-class",     "game.Main",
@@ -136,4 +136,12 @@ if ($null -eq $exeFile) {
     throw "Packaging finished but no .exe artifact was found in '$outDir'."
 }
 
-Write-Host "[package-exe] EXE created successfully: $($exeFile.FullName)"
+# Rename FactoryGame-X.Y.Z.exe → FactoryGame_X.Y.Z.exe (underscore convention)
+$renamedName = $exeFile.Name -replace "^FactoryGame-", "FactoryGame_"
+if ($renamedName -ne $exeFile.Name) {
+    $renamedPath = Join-Path $outDir $renamedName
+    Rename-Item -Path $exeFile.FullName -NewName $renamedName
+    Write-Host "[package-exe] EXE created successfully: $renamedPath"
+} else {
+    Write-Host "[package-exe] EXE created successfully: $($exeFile.FullName)"
+}

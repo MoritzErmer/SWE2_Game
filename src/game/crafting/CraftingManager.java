@@ -17,6 +17,17 @@ import java.util.Map;
 public class CraftingManager {
    private final List<CraftingRecipe> recipes;
 
+   /** When true, all recipes can be crafted regardless of ingredients. */
+   private volatile boolean creativeMode = false;
+
+   public void setCreativeMode(boolean creative) {
+      this.creativeMode = creative;
+   }
+
+   public boolean isCreativeMode() {
+      return creativeMode;
+   }
+
    public CraftingManager() {
       this.recipes = new ArrayList<>();
       registerDefaultRecipes();
@@ -101,8 +112,10 @@ public class CraftingManager {
 
    /**
     * Prüft ob der Spieler die benötigten Zutaten für ein Rezept besitzt.
+    * Im Kreativmodus wird immer true zurückgegeben.
     */
    public boolean canCraft(CraftingRecipe recipe, PlayerCharacter player) {
+      if (creativeMode) return true;
       for (Map.Entry<ItemType, Integer> entry : recipe.getIngredients().entrySet()) {
          if (player.getItemCount(entry.getKey()) < entry.getValue()) {
             return false;
@@ -113,18 +126,21 @@ public class CraftingManager {
 
    /**
     * Führt ein Crafting-Rezept aus: Entfernt Zutaten und fügt Ergebnis hinzu.
-    * 
+    * Im Kreativmodus werden keine Zutaten verbraucht.
+    *
     * @return true wenn erfolgreich, false wenn Zutaten fehlen oder Inventar voll.
     */
    public boolean craft(CraftingRecipe recipe, PlayerCharacter player) {
       if (!canCraft(recipe, player))
          return false;
 
-      // Zutaten entfernen
-      for (Map.Entry<ItemType, Integer> entry : recipe.getIngredients().entrySet()) {
-         if (!player.removeItem(entry.getKey(), entry.getValue())) {
-            // Sollte nicht passieren (canCraft hat geprüft), aber sicherheitshalber
-            return false;
+      if (!creativeMode) {
+         // Zutaten entfernen
+         for (Map.Entry<ItemType, Integer> entry : recipe.getIngredients().entrySet()) {
+            if (!player.removeItem(entry.getKey(), entry.getValue())) {
+               // Sollte nicht passieren (canCraft hat geprüft), aber sicherheitshalber
+               return false;
+            }
          }
       }
 

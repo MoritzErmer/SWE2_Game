@@ -1,14 +1,18 @@
 package game.ui;
 
+import game.GameMode;
+import game.core.GameSupervisor;
 import game.crafting.CraftingManager;
 import game.crafting.CraftingRecipe;
 import game.entity.ItemStack;
 import game.entity.ItemType;
 import game.entity.PlayerCharacter;
+import game.logistics.ConveyorBelt;
 import game.machine.BaseMachine;
 import game.machine.Grabber;
 import game.machine.Miner;
 import game.machine.Smelter;
+import game.save.SaveManager;
 import game.world.Tile;
 import game.world.TileType;
 import game.world.WorldMap;
@@ -17,8 +21,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.util.function.BiConsumer;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -41,6 +45,16 @@ public class GameUI extends JFrame {
    private final GamePanel gamePanel;
    private Consumer<BaseMachine> onMachinePlaced;
    private Consumer<BeltPlacement> onBeltPlaced;
+
+   // Save/load support
+   private GameSupervisor supervisor;
+   private List<BaseMachine> machineList;
+   private List<ConveyorBelt> beltList;
+   private GameMode gameMode = GameMode.NORMAL;
+
+   // HUD notification message (save/load feedback)
+   private String hudMessage = null;
+   private long hudMessageTime = 0;
 
    // Pixel-Art Texturen (8x8 → skaliert auf TILE_SIZE)
    private final PixelTextures textures;
@@ -166,6 +180,31 @@ public class GameUI extends JFrame {
       this.onBeltRemoved = callback;
    }
 
+   // ==================== SAVE / LOAD ====================
+
+   private void showHudMessage(String msg) {
+      hudMessage = msg;
+      hudMessageTime = System.currentTimeMillis();
+   }
+
+   private void saveGame() {
+      if (supervisor == null || machineList == null || beltList == null) {
+         showHudMessage("Speichern nicht verfuegbar");
+         return;
+      }
+      // Run off EDT so we don't block the UI thread during file I/O
+      new Thread(() -> {
+         SaveManager.save(supervisor, map, player, machineList, beltList, gameMode);
+         SwingUtilities.invokeLater(() -> showHudMessage("Gespeichert!"));
+      }, "save-thread").start();
+   }
+
+   private void loadGame() {
+      // Loading mid-game requires a restart to fully restore machines/belts.
+      // Show a message directing the user to use the main menu load option.
+      showHudMessage("Laden: Spiel neu starten und 'Laden' waehlen");
+   }
+
    // Mining state
    private boolean enterHeld = false;
    private long miningStartTime = 0;
@@ -176,9 +215,34 @@ public class GameUI extends JFrame {
    private int cameraX = 0;
    private int cameraY = 0;
 
+   /**
+    * Sets the supervisor and lists needed for save/load. Call before the game starts.
+    */
+   public void setSaveContext(GameSupervisor supervisor, List<BaseMachine> machines,
+                               List<ConveyorBelt> belts) {
+      this.supervisor = supervisor;
+      this.machineList = machines;
+      this.beltList = belts;
+   }
+
+   public void setGameMode(GameMode mode) {
+      this.gameMode = mode;
+      craftingManager.setCreativeMode(mode == GameMode.CREATIVE);
+   }
+
+   public game.crafting.CraftingManager getCraftingManager() {
+      return craftingManager;
+   }
+
    public GameUI(WorldMap map, PlayerCharacter player) {
+      this(map, player, GameMode.NORMAL);
+   }
+
+   public GameUI(WorldMap map, PlayerCharacter player, GameMode mode) {
       this.map = map;
       this.player = player;
+      this.gameMode = mode;
+      this.craftingManager.setCreativeMode(mode == GameMode.CREATIVE);
 
       this.textures = new PixelTextures(TILE_SIZE);
 
@@ -195,6 +259,17 @@ public class GameUI extends JFrame {
       gamePanel.addKeyListener(new KeyAdapter() {
          @Override
          public void keyPressed(KeyEvent e) {
+            // --- Ctrl+S: Speichern ---
+            if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_S) {
+               saveGame();
+               return;
+            }
+            // --- Ctrl+L: Laden (nur Hinweis, vollständige Wiederherstellung erfordert Neustart) ---
+            if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_L) {
+               loadGame();
+               return;
+            }
+
             // --- Crafting-Menü offen ---
             if (craftingOpen) {
                handleCraftingKey(e);
@@ -640,8 +715,21 @@ public class GameUI extends JFrame {
                int px = x * TILE_SIZE - cameraX;
                int py = y * TILE_SIZE - cameraY;
 
-               // Tile-Textur
-               BufferedImage tileTex = getTileTexture(tile);
+               // Tile-Textur (conveyor belts get a direction-aware texture)
+               BufferedImage tileTex;
+               if (tile.getType() == TileType.CONVEYOR_BELT && beltList != null) {
+                  // Find the ConveyorBelt at this position for direction info
+                  final int fx = x, fy = y;
+                  ConveyorBelt beltAtTile = beltList.stream()
+                        .filter(b -> b.getX() == fx && b.getY() == fy)
+                        .findFirst()
+                        .orElse(null);
+                  tileTex = (beltAtTile != null)
+                        ? getConveyorBeltTexture(beltAtTile)
+                        : textures.get("conveyor_belt");
+               } else {
+                  tileTex = getTileTexture(tile);
+               }
                g2.drawImage(tileTex, px, py, null);
 
                // Maschine als Textur
@@ -786,17 +874,44 @@ public class GameUI extends JFrame {
          int maxHp = player.getMaxHealth();
          g2.drawString("HP:" + hp + "/" + maxHp, 6, hudY + 14);
 
+         // Creative mode badge
+         int modeOffset = 70;
+         if (gameMode == GameMode.CREATIVE) {
+            g2.setColor(new Color(80, 140, 255));
+            g2.setFont(new Font("Monospaced", Font.BOLD, 11));
+            g2.drawString("[KREATIV]", 6 + modeOffset, hudY + 14);
+            modeOffset += 72;
+         }
+
+         g2.setColor(Color.WHITE);
+         g2.setFont(new Font("Monospaced", Font.PLAIN, 11));
+
          // Position
-         g2.drawString("(" + player.getX() + "," + player.getY() + ")", 120, hudY + 14);
+         g2.drawString("(" + player.getX() + "," + player.getY() + ")", 6 + modeOffset, hudY + 14);
 
          // Tile info
          Tile current = map.getTile(player.getX(), player.getY());
-         g2.drawString(current.getType().name(), 190, hudY + 14);
+         g2.drawString(current.getType().name(), 76 + modeOffset, hudY + 14);
 
          // Controls hint
          g2.setColor(new Color(150, 150, 150));
-         g2.drawString("[WASD]Move [E]Inv [C]Craft [Enter]Mine [1-9]Hotbar [LClick]Place [RClick]Interact",
-               290, hudY + 14);
+         g2.drawString("[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar",
+               176 + modeOffset, hudY + 14);
+
+         // HUD notification (save/load feedback, fades after 3 seconds)
+         if (hudMessage != null) {
+            long age = System.currentTimeMillis() - hudMessageTime;
+            if (age < 3000) {
+               int alpha = (int) (255 * Math.max(0.0, 1.0 - age / 3000.0));
+               g2.setFont(new Font("Monospaced", Font.BOLD, 13));
+               g2.setColor(new Color(100, 255, 120, alpha));
+               FontMetrics fm = g2.getFontMetrics();
+               int msgX = (getWidth() - fm.stringWidth(hudMessage)) / 2;
+               g2.drawString(hudMessage, msgX, hudY - 8);
+            } else {
+               hudMessage = null;
+            }
+         }
       }
 
       // --- Inventory Overlay ---
@@ -974,12 +1089,27 @@ public class GameUI extends JFrame {
             case COAL_DEPOSIT:
                return textures.get("coal_deposit");
             case CONVEYOR_BELT:
+               // Direction-aware belt texture: fall back to non-rotated if no belt data found
                return textures.get("conveyor_belt");
             case MACHINE:
                return textures.get("machine_bg");
             default:
                return textures.get("grass");
          }
+      }
+
+      /**
+       * Returns the directional conveyor belt texture for the given ConveyorBelt.
+       * Converts ConveyorBelt.Direction to game.machine.Direction for getRotated().
+       */
+      private BufferedImage getConveyorBeltTexture(ConveyorBelt belt) {
+         game.machine.Direction machineDir = switch (belt.getDirection()) {
+            case UP    -> game.machine.Direction.UP;
+            case RIGHT -> game.machine.Direction.RIGHT;
+            case DOWN  -> game.machine.Direction.DOWN;
+            case LEFT  -> game.machine.Direction.LEFT;
+         };
+         return textures.getRotated("conveyor_belt", machineDir);
       }
 
       private BufferedImage getMachineTexture(BaseMachine machine) {

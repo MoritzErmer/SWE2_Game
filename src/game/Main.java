@@ -5,7 +5,9 @@ import game.entity.PlayerCharacter;
 import game.logistics.ConveyorBelt;
 import game.logistics.TransportRobot;
 import game.machine.BaseMachine;
+import game.save.GameSaveState;
 import game.ui.GameUI;
+import game.ui.MainMenuUI;
 import game.world.WorldMap;
 
 import javax.swing.*;
@@ -14,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -41,7 +44,12 @@ public class Main {
       }
    }
 
-   private static void runGame() {
+   private static void runGame() throws Exception {
+      // --- Show main menu and block until user makes a choice ---
+      MainMenuUI.MenuResult menuResult = showMainMenu();
+      GameMode gameMode = menuResult.mode();
+      Optional<GameSaveState> saveState = menuResult.saveState();
+
       // --- Welt erstellen ---
       final int MAP_WIDTH = 120;
       final int MAP_HEIGHT = 80;
@@ -61,7 +69,17 @@ public class Main {
 
       // --- UI im EDT starten ---
       SwingUtilities.invokeLater(() -> {
-         GameUI ui = new GameUI(map, player);
+         GameUI ui = new GameUI(map, player, gameMode);
+         ui.setSaveContext(supervisor, machines, belts);
+
+         // Creative mode is applied to CraftingManager in the GameUI constructor.
+
+         // Restore player position from save state if present.
+         saveState.ifPresent(s -> {
+            if (s.player != null) {
+               player.setPosition(s.player.x, s.player.y);
+            }
+         });
 
          // Callback: Wenn eine Maschine im UI platziert wird, beim Supervisor
          // registrieren
@@ -101,6 +119,20 @@ public class Main {
       System.out.println("=== 2D Automation Game gestartet ===");
       System.out.println("Steuerung: WASD=Bewegen, 1=Miner, 2=Smelter, E=Item aufheben");
       System.out.println("Karte: " + MAP_WIDTH + "x" + MAP_HEIGHT + " Tiles");
+   }
+
+   /**
+    * Displays the main menu on the EDT and blocks the calling thread until
+    * the user makes a selection. Safe to call from the main thread.
+    */
+   private static MainMenuUI.MenuResult showMainMenu() throws Exception {
+      java.util.concurrent.CompletableFuture<MainMenuUI.MenuResult> future =
+            new java.util.concurrent.CompletableFuture<>();
+      SwingUtilities.invokeLater(() -> {
+         MainMenuUI menu = new MainMenuUI();
+         menu.showMenu().thenAccept(future::complete);
+      });
+      return future.get(); // blocks until user clicks a button
    }
 
    private static void installGlobalErrorHandler() {

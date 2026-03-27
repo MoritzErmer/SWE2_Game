@@ -5,6 +5,7 @@ C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\crafting\CraftingR
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\entity\ItemStack.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\entity\ItemType.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\entity\PlayerCharacter.java
+C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\GameMode.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\logistics\ConveyorBelt.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\logistics\LogisticsThread.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\logistics\TransportRobot.java
@@ -18,7 +19,10 @@ C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\machine\Production
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\machine\Smelter.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\machine\SmeltingStrategy.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\Main.java
+C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\save\GameSaveState.java
+C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\save\SaveManager.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\ui\GameUI.java
+C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\ui\MainMenuUI.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\ui\PixelTextures.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\world\Tile.java
 C:\Users\morit\Documents\DHBW\Sem_5_6\SWE2\SWE2_Game\src\game\world\TileType.java

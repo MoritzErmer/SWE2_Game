@@ -7,6 +7,9 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+env:
+  APP_VERSION: "1.0.${{ github.run_number }}"
+
 jobs:
   validate-and-package:
     runs-on: windows-latest
@@ -53,24 +56,23 @@ jobs:
 
       - name: Build EXE
         shell: pwsh
-        run: ./scripts/package-exe.ps1
+        run: ./scripts/package-exe.ps1 -AppVersion "$env:APP_VERSION"
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: swe2-game-dist
-          path: dist/*.exe
+          name: factory-game-dist
+          path: dist/FactoryGame_*.exe
 
-      - name: Publish GitHub Release (rolling latest)
+      - name: Publish GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: "Latest Build (main)"
+          tag_name: "v${{ env.APP_VERSION }}"
+          name: "FactoryGame v${{ env.APP_VERSION }}"
           body: |
             Automatisch gebaut aus Branch `main` — Commit ${{ github.sha }}
 
             **Keine Java-Installation nötig.** Installer ausführen, fertig.
-          prerelease: true
           make_latest: true
-          files: dist/*.exe
+          files: dist/FactoryGame_*.exe
