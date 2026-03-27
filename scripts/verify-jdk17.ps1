@@ -14,7 +14,9 @@ function Assert-Command {
 Assert-Command -CommandName "java" -Hint "Install JDK 17+ and add it to PATH."
 Assert-Command -CommandName "javac" -Hint "Install JDK 17+ and add it to PATH."
 Assert-Command -CommandName "jpackage" -Hint "Use a JDK distribution that includes jpackage."
-Assert-Command -CommandName "mvn" -Hint "Install Maven and add it to PATH."
+Assert-Command -CommandName "jdeps"    -Hint "Use a JDK distribution that includes jdeps (JDK 17+)."
+Assert-Command -CommandName "jlink"    -Hint "Use a JDK distribution that includes jlink (JDK 17+)."
+Assert-Command -CommandName "mvn"      -Hint "Install Maven and add it to PATH."
 
 $javaVersionOutput = & java -version 2>&1
 $versionLine = $javaVersionOutput | Select-Object -First 1
@@ -29,4 +31,4 @@ if ($major -lt 17) {
 }
 
 Write-Host "[verify-jdk17] Java line: $versionLine"
-Write-Host "[verify-jdk17] Environment OK (Java $major, javac, jpackage, mvn found)."
+Write-Host "[verify-jdk17] Environment OK (Java $major, javac, jpackage, jdeps, jlink, mvn found)."

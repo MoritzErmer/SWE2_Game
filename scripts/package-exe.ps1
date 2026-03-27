@@ -36,8 +36,20 @@ function Assert-Command {
     }
 }
 
-Assert-Command -CommandName "mvn" -HelpText "Install Maven and ensure it is in PATH."
+function Assert-WixInstalled {
+    $inPath = Get-Command "candle.exe" -ErrorAction SilentlyContinue
+    $inDefaultDir = Get-ChildItem "C:\Program Files (x86)\WiX Toolset*\bin\candle.exe" `
+                        -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $inPath -and -not $inDefaultDir) {
+        throw "WiX Toolset 3.x nicht gefunden. jpackage benoetigt WiX fuer den Typ 'exe'.`nDownload: https://wixtoolset.org/releases/ — danach PATH aktualisieren."
+    }
+}
+
+Assert-Command -CommandName "mvn"      -HelpText "Install Maven and ensure it is in PATH."
 Assert-Command -CommandName "jpackage" -HelpText "Use JDK 17+ and ensure jpackage is in PATH."
+Assert-Command -CommandName "jdeps"    -HelpText "Use JDK 17+ and ensure jdeps is in PATH."
+Assert-Command -CommandName "jlink"    -HelpText "Use JDK 17+ and ensure jlink is in PATH."
+Assert-WixInstalled
 
 $pomPath = Join-Path $PSScriptRoot "..\pom.xml"
 if ([string]::IsNullOrWhiteSpace($AppVersion)) {
@@ -59,6 +71,35 @@ if (Test-Path $outDir) {
 }
 New-Item -ItemType Directory -Path $outDir | Out-Null
 
+# --- jdeps: erforderliche Java-Module ermitteln ---
+Write-Host "[package-exe] Analysiere Java-Module mit jdeps ..."
+$jdepsOutput = & jdeps --print-module-deps --ignore-missing-deps $jarPath 2>$null
+# jdeps gibt mehrzeilige Ausgabe; die letzte nicht-leere Zeile enthaelt die Modulliste
+$modules = ($jdepsOutput | Where-Object { $_ -match '\S' } | Select-Object -Last 1).Trim()
+if ([string]::IsNullOrWhiteSpace($modules)) {
+    $modules = "java.base,java.desktop,java.logging,java.management"
+    Write-Warning "[package-exe] jdeps lieferte kein Ergebnis — Fallback-Module: $modules"
+} else {
+    Write-Host "[package-exe] Erforderliche Module: $modules"
+}
+
+# --- jlink: minimale JRE erstellen ---
+$runtimeDir = Join-Path $outDir "runtime"
+Write-Host "[package-exe] Erstelle minimale JRE mit jlink ..."
+& jlink `
+    --no-header-files `
+    --no-man-pages `
+    --compress=2 `
+    --strip-debug `
+    --add-modules $modules `
+    --output $runtimeDir
+if ($LASTEXITCODE -ne 0) {
+    throw "jlink fehlgeschlagen (Exit-Code $LASTEXITCODE)."
+}
+$runtimeSizeMB = "{0:N1}" -f ((Get-ChildItem $runtimeDir -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+Write-Host "[package-exe] Minimale JRE erstellt: $runtimeDir ($runtimeSizeMB MB)"
+
+# --- jpackage: Windows-EXE-Installer mit gebundeler JRE ---
 $jpackageArgs = @(
     "--type", "exe",
     "--name", "SWE2-Game",
@@ -68,8 +109,10 @@ $jpackageArgs = @(
     "--dest", $outDir,
     "--vendor", $Vendor,
     "--app-version", $AppVersion,
+    "--runtime-image", $runtimeDir,
     "--win-shortcut",
-    "--win-menu"
+    "--win-menu",
+    "--win-dir-chooser"
 )
 
 Write-Host "[package-exe] Running jpackage (timeout: $PackageTimeoutSeconds sec) ..."

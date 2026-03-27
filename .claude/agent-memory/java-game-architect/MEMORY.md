@@ -1,0 +1,1 @@
+- [Standalone Packaging Architecture](project_packaging.md) — jlink+jpackage Windows EXE; exec-maven-plugin in pom.xml
