@@ -55,10 +55,14 @@ if ([string]::IsNullOrWhiteSpace($AppVersion)) {
     $AppVersion = Get-VersionFromPom -PomPath $pomPath
 }
 
+# $pomVersion is always read from pom.xml — it is what Maven uses to name the JAR.
+# $AppVersion (the CI build counter) is only used for the jpackage --app-version flag.
+$pomVersion = Get-VersionFromPom -PomPath $pomPath
+
 Write-Host "[package-exe] Building project with version $AppVersion ..."
 mvn clean package -DskipTests
 
-$jarName = "swe2-game-$AppVersion.jar"
+$jarName = "swe2-game-$pomVersion.jar"
 $jarPath = Join-Path $PSScriptRoot "..\target\$jarName"
 if (-not (Test-Path $jarPath)) {
     throw "Expected JAR not found: $jarPath"
