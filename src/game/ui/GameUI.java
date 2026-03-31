@@ -69,6 +69,9 @@ public class GameUI extends JFrame {
    private String craftingMessage = null;
    private long craftingMessageTime = 0;
 
+   // Animation frame counter (incremented at TARGET_FPS)
+   private int animFrame = 0;
+
    // Spieler-Blickrichtung (für Greifer-Platzierung und Vorschau)
    private int lastDx = 1; // Standard: nach rechts
    private int lastDy = 0;
@@ -367,6 +370,7 @@ public class GameUI extends JFrame {
 
       // FPS-Timer: repaint + Mining-Check + Kamera-Update
       Timer timer = new Timer(1000 / TARGET_FPS, evt -> {
+         animFrame++;
          updateCamera();
          checkMiningComplete();
          gamePanel.repaint();
@@ -725,7 +729,7 @@ public class GameUI extends JFrame {
                         .findFirst()
                         .orElse(null);
                   tileTex = (beltAtTile != null)
-                        ? getConveyorBeltTexture(beltAtTile)
+                        ? getConveyorBeltTexture(beltAtTile, Math.floorMod(animFrame / 3, 4))
                         : textures.get("conveyor_belt");
                } else {
                   tileTex = getTileTexture(tile);
@@ -735,7 +739,7 @@ public class GameUI extends JFrame {
                // Maschine als Textur
                if (tile.hasMachine()) {
                   BaseMachine machine = tile.getMachine();
-                  BufferedImage machineTex = getMachineTexture(machine);
+                  BufferedImage machineTex = getMachineTexture(machine, animFrame);
                   if (machineTex != null) {
                      g2.drawImage(machineTex, px, py, null);
                   }
@@ -1102,23 +1106,34 @@ public class GameUI extends JFrame {
        * Returns the directional conveyor belt texture for the given ConveyorBelt.
        * Converts ConveyorBelt.Direction to game.machine.Direction for getRotated().
        */
-      private BufferedImage getConveyorBeltTexture(ConveyorBelt belt) {
+      private BufferedImage getConveyorBeltTexture(ConveyorBelt belt, int frame) {
          game.machine.Direction machineDir = switch (belt.getDirection()) {
             case UP    -> game.machine.Direction.UP;
             case RIGHT -> game.machine.Direction.RIGHT;
             case DOWN  -> game.machine.Direction.DOWN;
             case LEFT  -> game.machine.Direction.LEFT;
          };
-         return textures.getRotated("conveyor_belt", machineDir);
+         String key = "conveyor_belt_f" + frame;
+         BufferedImage tex = textures.getRotated(key, machineDir);
+         return (tex != null) ? tex : textures.getRotated("conveyor_belt", machineDir);
       }
 
-      private BufferedImage getMachineTexture(BaseMachine machine) {
-         if (machine instanceof Grabber)
-            return textures.getRotated("grabber", machine.getDirection());
-         if (machine instanceof Miner)
-            return textures.getRotated("miner", machine.getDirection());
-         if (machine instanceof Smelter)
-            return textures.getRotated("smelter", machine.getDirection());
+      private BufferedImage getMachineTexture(BaseMachine machine, int frame) {
+         if (machine instanceof Grabber) {
+            int f = Math.floorMod(frame / 8, 4);
+            BufferedImage t = textures.getRotated("grabber_f" + f, machine.getDirection());
+            return (t != null) ? t : textures.getRotated("grabber", machine.getDirection());
+         }
+         if (machine instanceof Miner) {
+            int f = Math.floorMod(frame / 15, 2);
+            BufferedImage t = textures.getRotated("miner_f" + f, machine.getDirection());
+            return (t != null) ? t : textures.getRotated("miner", machine.getDirection());
+         }
+         if (machine instanceof Smelter) {
+            int f = Math.floorMod(frame / 10, 3);
+            BufferedImage t = textures.getRotated("smelter_f" + f, machine.getDirection());
+            return (t != null) ? t : textures.getRotated("smelter", machine.getDirection());
+         }
          return null;
       }
 

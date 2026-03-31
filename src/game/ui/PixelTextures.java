@@ -54,6 +54,174 @@ public class PixelTextures {
       cache.put("item_smelter_kit", generateItemTexture(new Color(220, 100, 50), new Color(180, 70, 30)));
       cache.put("item_grabber_kit", generateItemTexture(new Color(120, 200, 120), new Color(80, 160, 80)));
       cache.put("grabber", generateGrabberTexture());
+      generateConveyorBeltFrames();
+      generateMinerFrames();
+      generateSmelterFrames();
+      generateGrabberFrames();
+   }
+
+   private void generateConveyorBeltFrames() {
+      Color bg    = new Color(0x44, 0x44, 0x44);
+      Color rail  = new Color(0x88, 0x88, 0x88);
+      Color arrow = new Color(0xFF, 0xFF, 0xFF);
+      Color spare = new Color(0xAA, 0xAA, 0xAA);
+      Color[] pal = { bg, rail, arrow, spare };
+      // Frame 0: chevron tip at col 3 (same as static base)
+      int[][] f0 = {
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+            { 1, 0, 0, 2, 0, 0, 0, 1 },
+            { 1, 0, 0, 2, 2, 0, 0, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 0, 0, 2, 2, 0, 0, 1 },
+            { 1, 0, 0, 2, 0, 0, 0, 1 },
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+      };
+      // Frame 1: chevron tip shifted +2 to col 5
+      int[][] f1 = {
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+            { 1, 0, 0, 0, 0, 2, 0, 1 },
+            { 1, 0, 0, 0, 0, 2, 2, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 0, 0, 0, 0, 2, 2, 1 },
+            { 1, 0, 0, 0, 0, 2, 0, 1 },
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+      };
+      // Frame 2: chevron wraps — tip at col 1 (just entered from left)
+      int[][] f2 = {
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+            { 1, 2, 0, 0, 0, 0, 0, 1 },
+            { 1, 2, 2, 0, 0, 0, 0, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 2, 2, 0, 0, 0, 0, 1 },
+            { 1, 2, 0, 0, 0, 0, 0, 1 },
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+      };
+      // Frame 3: chevron tip at col 2
+      int[][] f3 = {
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+            { 1, 0, 2, 0, 0, 0, 0, 1 },
+            { 1, 0, 2, 2, 0, 0, 0, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 2, 2, 2, 2, 2, 2, 1 },
+            { 1, 0, 2, 2, 0, 0, 0, 1 },
+            { 1, 0, 2, 0, 0, 0, 0, 1 },
+            { 1, 0, 0, 0, 0, 0, 0, 1 },
+      };
+      cache.put("conveyor_belt_f0", buildFromPalette(f0, pal));
+      cache.put("conveyor_belt_f1", buildFromPalette(f1, pal));
+      cache.put("conveyor_belt_f2", buildFromPalette(f2, pal));
+      cache.put("conveyor_belt_f3", buildFromPalette(f3, pal));
+   }
+
+   private void generateMinerFrames() {
+      Color bg   = new Color(0, 0, 0, 0);
+      Color body = new Color(220, 140, 30);
+      Color dark = new Color(170, 100, 20);
+      Color pick = new Color(180, 180, 190);
+      // Frame 0: identical to generateMinerDirectional
+      int[][] f0 = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 1, 1, 0, 3, 3, 0 },
+            { 0, 1, 2, 1, 1, 0, 3, 0 },
+            { 0, 1, 1, 2, 1, 1, 3, 0 },
+            { 0, 1, 1, 2, 1, 1, 3, 0 },
+            { 0, 1, 2, 1, 1, 0, 3, 0 },
+            { 0, 0, 1, 1, 0, 3, 3, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      // Frame 1: pick tip shifted 1px right (drill impact)
+      int[][] f1 = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 1, 1, 0, 0, 3, 3 },
+            { 0, 1, 2, 1, 1, 0, 0, 3 },
+            { 0, 1, 1, 2, 1, 1, 0, 3 },
+            { 0, 1, 1, 2, 1, 1, 0, 3 },
+            { 0, 1, 2, 1, 1, 0, 0, 3 },
+            { 0, 0, 1, 1, 0, 0, 3, 3 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      Color[] pal = { bg, body, dark, pick };
+      cache.put("miner_f0", buildFromPalette(f0, pal));
+      cache.put("miner_f1", buildFromPalette(f1, pal));
+   }
+
+   private void generateSmelterFrames() {
+      Color bg   = new Color(0, 0, 0, 0);
+      Color body = new Color(160, 50, 40);
+      Color dark = new Color(120, 30, 25);
+      // Same pixel layout as generateSmelterDirectional, only fire color cycles
+      int[][] map = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 1, 1, 1, 1, 1, 0, 0 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 1, 1, 1, 1, 0, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      cache.put("smelter_f0", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(255, 180, 30) }));
+      cache.put("smelter_f1", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(230, 100, 20) }));
+      cache.put("smelter_f2", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(255, 140, 10) }));
+   }
+
+   private void generateGrabberFrames() {
+      Color bg   = new Color(0, 0, 0, 0);
+      Color body = new Color(60, 120, 210);
+      Color dark = new Color(40, 80, 160);
+      Color tip  = new Color(230, 80, 30);
+      Color[] pal = { bg, body, dark, tip };
+      // Frame 0: arm retracted (tip only at col 4)
+      int[][] f0 = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 1, 1, 1, 3, 0, 0, 0 },
+            { 0, 1, 2, 1, 3, 0, 0, 0 },
+            { 0, 1, 2, 1, 3, 0, 0, 0 },
+            { 0, 1, 1, 1, 3, 0, 0, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      // Frame 1: arm half extended (cols 4-5)
+      int[][] f1 = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 1, 1, 1, 3, 3, 0, 0 },
+            { 0, 1, 2, 1, 3, 3, 0, 0 },
+            { 0, 1, 2, 1, 3, 3, 0, 0 },
+            { 0, 1, 1, 1, 3, 3, 0, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      // Frame 2: arm fully extended (cols 4-7, same as static base)
+      int[][] f2 = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 1, 1, 1, 3, 0, 0, 0 },
+            { 0, 1, 2, 1, 3, 3, 3, 3 },
+            { 0, 1, 2, 1, 3, 3, 3, 3 },
+            { 0, 1, 1, 1, 3, 0, 0, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      // Frame 3: arm retracting (cols 4-6)
+      int[][] f3 = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 1, 1, 1, 3, 3, 3, 0 },
+            { 0, 1, 2, 1, 3, 3, 3, 0 },
+            { 0, 1, 2, 1, 3, 3, 3, 0 },
+            { 0, 1, 1, 1, 3, 3, 3, 0 },
+            { 0, 2, 1, 1, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      cache.put("grabber_f0", buildFromPalette(f0, pal));
+      cache.put("grabber_f1", buildFromPalette(f1, pal));
+      cache.put("grabber_f2", buildFromPalette(f2, pal));
+      cache.put("grabber_f3", buildFromPalette(f3, pal));
    }
 
    // --- Grass: Grüntöne mit zufälligen dunkleren Grashalmen ---

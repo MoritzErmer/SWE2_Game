@@ -1,6 +1,7 @@
 package game;
 
 import game.core.GameSupervisor;
+import game.entity.ItemType;
 import game.entity.PlayerCharacter;
 import game.logistics.ConveyorBelt;
 import game.logistics.TransportRobot;
@@ -58,6 +59,11 @@ public class Main {
 
       // --- Spieler erstellen ---
       PlayerCharacter player = new PlayerCharacter(MAP_WIDTH / 2, MAP_HEIGHT / 2);
+      // Startinventar: Werkzeuge für Platzierung
+      player.addItem(ItemType.MINER_KIT, 10);
+      player.addItem(ItemType.SMELTER_KIT, 10);
+      player.addItem(ItemType.GRABBER_KIT, 10);
+      player.addItem(ItemType.CONVEYOR_BELT_ITEM, 50);
 
       // --- Maschinen, Belts, Roboter (initial leer, werden im Spiel platziert) ---
       List<BaseMachine> machines = new CopyOnWriteArrayList<>();
