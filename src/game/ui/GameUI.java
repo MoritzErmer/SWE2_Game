@@ -16,7 +16,6 @@ import game.save.SaveManager;
 import game.world.Tile;
 import game.world.TileType;
 import game.world.WorldMap;
-import game.ui.IsoRenderer;
 
 import javax.swing.*;
 import java.awt.*;
@@ -27,8 +26,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
- * Haupt-UI des Spiels mit isometrischem Grid-Rendering, Inventar-Overlay,
- * Hotbar, Mining-Mechanik (Enter halten) und Item-Platzierung (Linksklick).
+ * Haupt-UI des Spiels mit Grid-Rendering, Inventar-Overlay, Hotbar,
+ * Mining-Mechanik (Enter halten) und Item-Platzierung (Linksklick).
  *
  * Rendering ist FPS-begrenzt über einen Swing-Timer, der repaint() triggert.
  * Mining läuft als separater SwingWorker-Thread, um den EDT nicht zu
@@ -36,7 +35,7 @@ import java.util.function.Consumer;
  */
 @SuppressWarnings("serial")
 public class GameUI extends JFrame {
-   private static final int TILE_SIZE = 32;   // Used only for UI elements (hotbar, inventory)
+   private static final int TILE_SIZE = 32;
    private static final int HOTBAR_HEIGHT = 48;
    private static final int HUD_HEIGHT = 20;
    private static final int TARGET_FPS = 30;
@@ -78,12 +77,6 @@ public class GameUI extends JFrame {
    // Callback für Maschinen-Deconstruction (deregistrieren)
    private java.util.function.Consumer<BaseMachine> onMachineRemoved;
    private BiConsumer<Integer, Integer> onBeltRemoved;
-
-   // Isometric rendering
-   private final IsoRenderer isoRenderer = new IsoRenderer();
-   private int isoOriginX = 0;
-   private int isoOriginY = 0;
-   private long animFrame = 0;
 
    public static final class BeltPlacement {
       private final int x;
@@ -218,6 +211,10 @@ public class GameUI extends JFrame {
    private int miningRequiredMs = 0;
    private boolean miningInProgress = false;
 
+   // Kamera-Offset (Pixel): Wird jedes Frame auf Spielerposition zentriert
+   private int cameraX = 0;
+   private int cameraY = 0;
+
    /**
     * Sets the supervisor and lists needed for save/load. Call before the game starts.
     */
@@ -247,7 +244,7 @@ public class GameUI extends JFrame {
       this.gameMode = mode;
       this.craftingManager.setCreativeMode(mode == GameMode.CREATIVE);
 
-      this.textures = new PixelTextures();
+      this.textures = new PixelTextures(TILE_SIZE);
 
       setTitle("2D Automation Game - SE2 DHBW 2026");
       setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -356,9 +353,8 @@ public class GameUI extends JFrame {
       gamePanel.addMouseListener(new MouseAdapter() {
          @Override
          public void mousePressed(MouseEvent e) {
-            Point worldPt = isoRenderer.screenToWorld(e.getX(), e.getY());
-            int tx = worldPt.x;
-            int ty = worldPt.y;
+            int tx = (e.getX() + cameraX) / TILE_SIZE;
+            int ty = (e.getY() + cameraY) / TILE_SIZE;
             if (!map.inBounds(tx, ty))
                return;
             if (SwingUtilities.isLeftMouseButton(e)) {
@@ -371,7 +367,6 @@ public class GameUI extends JFrame {
 
       // FPS-Timer: repaint + Mining-Check + Kamera-Update
       Timer timer = new Timer(1000 / TARGET_FPS, evt -> {
-         animFrame++;
          updateCamera();
          checkMiningComplete();
          gamePanel.repaint();
@@ -383,19 +378,28 @@ public class GameUI extends JFrame {
       SwingUtilities.invokeLater(() -> gamePanel.requestFocusInWindow());
    }
 
-   /** Centers the camera on the player in isometric space. */
+   /** Zentriert die Kamera auf den Spieler, clampt an Kartenränder. */
    private void updateCamera() {
       int screenW = gamePanel.getWidth();
       int screenH = gamePanel.getHeight() - HOTBAR_HEIGHT - HUD_HEIGHT;
+      int worldW = map.getWidth() * TILE_SIZE;
+      int worldH = map.getHeight() * TILE_SIZE;
 
-      int px = player.getX();
-      int py = player.getY();
+      // Kamera zentriert auf Spieler
+      cameraX = player.getX() * TILE_SIZE + TILE_SIZE / 2 - screenW / 2;
+      cameraY = player.getY() * TILE_SIZE + TILE_SIZE / 2 - screenH / 2;
 
-      // Place player at screen center in isometric space
-      isoOriginX = screenW / 2 - (px - py) * (IsoRenderer.ISO_TILE_W / 2);
-      isoOriginY = screenH / 2 - (px + py) * (IsoRenderer.ISO_TILE_H / 2);
-
-      isoRenderer.updateOrigin(isoOriginX, isoOriginY);
+      // Clamp: wenn Welt kleiner als Bildschirm → zentrieren, sonst an Ränder clampen
+      if (worldW <= screenW) {
+         cameraX = -(screenW - worldW) / 2;
+      } else {
+         cameraX = Math.max(0, Math.min(cameraX, worldW - screenW));
+      }
+      if (worldH <= screenH) {
+         cameraY = -(screenH - worldH) / 2;
+      } else {
+         cameraY = Math.max(0, Math.min(cameraY, worldH - screenH));
+      }
    }
 
    public void setOnMachinePlaced(Consumer<BaseMachine> callback) {
@@ -613,11 +617,11 @@ public class GameUI extends JFrame {
 
          // Smelter: Erz einfüllen aus Hotbar
          if (machine instanceof Smelter) {
-            ItemStack sel = player.getSelectedItem();
-            if (sel != null) {
-               ItemType type = sel.getType();
+            ItemStack selected = player.getSelectedItem();
+            if (selected != null) {
+               ItemType type = selected.getType();
                if (type == ItemType.IRON_ORE || type == ItemType.COPPER_ORE) {
-                  int toAdd = Math.min(5, sel.getAmount());
+                  int toAdd = Math.min(5, selected.getAmount());
                   if (machine.tryInsertInput(new ItemStack(type, toAdd))) {
                      player.consumeSelectedItem(toAdd);
                   }
@@ -662,7 +666,7 @@ public class GameUI extends JFrame {
    // ==================== RENDERING ====================
 
    /**
-    * Inneres JPanel für doppelt gepuffertes isometrisches Grid-Rendering.
+    * Inneres JPanel für doppelt gepuffertes Grid-Rendering.
     */
    private class GamePanel extends JPanel {
       GamePanel() {
@@ -676,7 +680,7 @@ public class GameUI extends JFrame {
          Graphics2D g2 = (Graphics2D) g;
          g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-         drawIsoGrid(g2);
+         drawGrid(g2);
          drawPlayer(g2);
          drawMiningBar(g2);
          drawHotbar(g2);
@@ -690,157 +694,99 @@ public class GameUI extends JFrame {
          }
       }
 
-      // --- Isometric Grid ---
-      private void drawIsoGrid(Graphics2D g2) {
+      // --- Grid (Pixel-Art Texturen) mit Kamera-Offset ---
+      private void drawGrid(Graphics2D g2) {
+         // Nearest-Neighbor für scharfe Pixel
          g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-               RenderingHints.VALUE_ANTIALIAS_OFF);
 
-         int screenW = gamePanel.getWidth();
-         int screenH = gamePanel.getHeight() - HOTBAR_HEIGHT - HUD_HEIGHT;
-         int mapW = map.getWidth();
-         int mapH = map.getHeight();
+         int screenW = getWidth();
+         int screenH = getHeight();
 
-         // Frustum culling with 3-tile padding (box sprites can poke into adjacent cells)
-         int txMin = isoRenderer.visibleTxMin(screenW, screenH, mapW, mapH, 3);
-         int txMax = isoRenderer.visibleTxMax(screenW, screenH, mapW, mapH, 3);
-         int tyMin = isoRenderer.visibleTyMin(screenW, screenH, mapW, mapH, 3);
-         int tyMax = isoRenderer.visibleTyMax(screenW, screenH, mapW, mapH, 3);
+         // Nur sichtbare Tiles rendern (Culling)
+         int startTX = Math.max(0, cameraX / TILE_SIZE);
+         int startTY = Math.max(0, cameraY / TILE_SIZE);
+         int endTX = Math.min(map.getWidth(), (cameraX + screenW) / TILE_SIZE + 1);
+         int endTY = Math.min(map.getHeight(), (cameraY + screenH) / TILE_SIZE + 1);
 
-         isoRenderer.visitDepthSorted(txMin, txMax, tyMin, tyMax, (tx, ty) -> {
-            if (!map.inBounds(tx, ty)) return;
-            Tile tile = map.getTile(tx, ty);
+         for (int x = startTX; x < endTX; x++) {
+            for (int y = startTY; y < endTY; y++) {
+               Tile tile = map.getTile(x, y);
+               int px = x * TILE_SIZE - cameraX;
+               int py = y * TILE_SIZE - cameraY;
 
-            int sx = isoRenderer.screenX(tx, ty);
-            int sy = isoRenderer.screenY(tx, ty);
-
-            // --- 1. Ground tile (64x32 iso diamond) ---
-            BufferedImage groundTex = getIsoGroundTexture(tile, tx, ty);
-            if (groundTex != null) {
-               g2.drawImage(groundTex, sx, sy, null);
-            }
-
-            // --- 2. Conveyor belt (renders as ground-level iso tile) ---
-            if (tile.getType() == TileType.CONVEYOR_BELT && beltList != null) {
-               final int fx = tx, fy = ty;
-               ConveyorBelt belt = beltList.stream()
-                     .filter(b -> b.getX() == fx && b.getY() == fy)
-                     .findFirst().orElse(null);
-               if (belt != null) {
-                  int frame = (int) ((animFrame / 3) % 4);
-                  String key = "conveyor_belt_frame" + frame;
-                  game.machine.Direction dir = switch (belt.getDirection()) {
-                     case UP    -> game.machine.Direction.UP;
-                     case DOWN  -> game.machine.Direction.DOWN;
-                     case LEFT  -> game.machine.Direction.LEFT;
-                     case RIGHT -> game.machine.Direction.RIGHT;
-                  };
-                  BufferedImage beltTex = textures.getRotated(key, dir);
-                  if (beltTex != null) g2.drawImage(beltTex, sx, sy, null);
+               // Tile-Textur (conveyor belts get a direction-aware texture)
+               BufferedImage tileTex;
+               if (tile.getType() == TileType.CONVEYOR_BELT && beltList != null) {
+                  // Find the ConveyorBelt at this position for direction info
+                  final int fx = x, fy = y;
+                  ConveyorBelt beltAtTile = beltList.stream()
+                        .filter(b -> b.getX() == fx && b.getY() == fy)
+                        .findFirst()
+                        .orElse(null);
+                  tileTex = (beltAtTile != null)
+                        ? getConveyorBeltTexture(beltAtTile)
+                        : textures.get("conveyor_belt");
+               } else {
+                  tileTex = getTileTexture(tile);
                }
-            }
+               g2.drawImage(tileTex, px, py, null);
 
-            // --- 3. Machine box sprite (64x48, drawn ISO_BOX_H above ground) ---
-            BaseMachine machine = getMachineAt(tx, ty);
-            if (machine != null) {
-               BufferedImage machineTex = getIsoMachineTexture(machine);
-               if (machineTex != null) {
-                  // Box sprite origin: tile diamond top minus front-face height
-                  g2.drawImage(machineTex, sx, sy - IsoRenderer.ISO_BOX_H, null);
-               }
+               // Maschine als Textur
+               if (tile.hasMachine()) {
+                  BaseMachine machine = tile.getMachine();
+                  BufferedImage machineTex = getMachineTexture(machine);
+                  if (machineTex != null) {
+                     g2.drawImage(machineTex, px, py, null);
+                  }
 
-               // Buffer indicators (text overlay, centred on diamond face)
-               int cx = sx + IsoRenderer.ISO_TILE_W / 2;
-               int cy = sy + IsoRenderer.ISO_TILE_H / 2 - IsoRenderer.ISO_BOX_H;
-               g2.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 9));
-               int inCount = machine.getInputBuffer() != null ? machine.getInputBuffer().getAmount() : 0;
-               int outCount = machine.getOutputBuffer() != null ? machine.getOutputBuffer().getAmount() : 0;
-               if (inCount > 0) {
-                  g2.setColor(new java.awt.Color(150, 220, 255));
-                  g2.drawString("I:" + inCount, cx - 14, cy - 4);
-               }
-               if (outCount > 0) {
-                  g2.setColor(new java.awt.Color(255, 220, 80));
-                  g2.drawString("O:" + outCount, cx - 14, cy + 8);
+                  // Buffer-Indikatoren (kleine Zahlen)
+                  g2.setFont(new Font("Monospaced", Font.BOLD, 9));
+                  if (machine.hasInput()) {
+                     g2.setColor(new Color(100, 200, 255));
+                     g2.drawString("I:" + machine.getInputBuffer().getAmount(), px + 1, py + 9);
+                  }
+                  if (machine.hasOutput()) {
+                     g2.setColor(new Color(255, 220, 80));
+                     g2.drawString("O:" + machine.getOutputBuffer().getAmount(), px + 1, py + TILE_SIZE - 2);
+                  }
+
+                  // Greifer: Richtungspfeil zeichnen
+                  if (machine instanceof Grabber) {
+                     Grabber gr = (Grabber) machine;
+                     int cx = px + TILE_SIZE / 2;
+                     int cy = py + TILE_SIZE / 2;
+                     int ax = cx + gr.getDestDx() * 10;
+                     int ay = cy + gr.getDestDy() * 10;
+                     g2.setColor(new Color(255, 255, 100, 200));
+                     g2.setStroke(new BasicStroke(2));
+                     g2.drawLine(cx - gr.getDestDx() * 8, cy - gr.getDestDy() * 8, ax, ay);
+                     g2.setStroke(new BasicStroke(1));
+                  }
                }
 
-               // Grabber direction arrow
-               if (machine instanceof Grabber) {
-                  Grabber gr = (Grabber) machine;
-                  int ax = cx + gr.getDestDx() * 12;
-                  int ay = cy + IsoRenderer.ISO_BOX_H / 2 + gr.getDestDy() * 6;
-                  g2.setColor(new java.awt.Color(255, 255, 100, 200));
-                  g2.setStroke(new java.awt.BasicStroke(2));
-                  g2.drawLine(cx - gr.getDestDx() * 8, cy + IsoRenderer.ISO_BOX_H / 2 - gr.getDestDy() * 6, ax, ay);
-                  g2.setStroke(new java.awt.BasicStroke(1));
-               }
-            }
-
-            // --- 4. Item on ground (small icon centred in diamond) ---
-            if (tile.hasItem()) {
-               ItemStack item = tile.getItemOnGround();
-               if (item != null) {
-                  BufferedImage icon = getItemTexture(item.getType());
-                  if (icon != null) {
-                     int iconSize = 20;
-                     g2.drawImage(icon,
-                           sx + IsoRenderer.ISO_TILE_W / 2 - iconSize / 2,
-                           sy + IsoRenderer.ISO_TILE_H / 2 - iconSize / 2,
-                           iconSize, iconSize, null);
+               // Item auf dem Boden als Textur
+               if (tile.hasItem()) {
+                  BufferedImage itemTex = getItemTexture(tile.getItemOnGround().getType());
+                  if (itemTex != null) {
+                     g2.drawImage(itemTex, px, py, null);
                   }
                }
             }
-         });
-      }
-
-      /** Returns the ground texture for the tile. Conveyor belt is handled separately. */
-      private BufferedImage getIsoGroundTexture(Tile tile, int tx, int ty) {
-         return switch (tile.getType()) {
-            case IRON_DEPOSIT   -> textures.get("iron_deposit");
-            case COPPER_DEPOSIT -> textures.get("copper_deposit");
-            case COAL_DEPOSIT   -> textures.get("coal_deposit");
-            case MACHINE        -> textures.get("machine_bg");
-            case CONVEYOR_BELT  -> textures.get("stone_floor"); // belt drawn on top separately
-            default             -> textures.get("grass");       // EMPTY and any future types
-         };
-      }
-
-      /** Returns the animated box sprite for a machine. */
-      private BufferedImage getIsoMachineTexture(BaseMachine machine) {
-         if (machine instanceof Smelter) {
-            int frame = (int) ((animFrame / 5) % 3);
-            return textures.getRotated("smelter_frame" + frame, machine.getDirection());
          }
-         if (machine instanceof Grabber) {
-            int frame = (int) ((animFrame / 4) % 4);
-            return textures.getRotated("grabber_frame" + frame, machine.getDirection());
-         }
-         if (machine instanceof Miner) {
-            return textures.getRotated("miner", machine.getDirection());
-         }
-         return textures.get("machine_bg");
       }
 
-      /** Returns the machine located at world tile (tx, ty), or null. */
-      private BaseMachine getMachineAt(int tx, int ty) {
-         if (!map.inBounds(tx, ty)) return null;
-         Tile tile = map.getTile(tx, ty);
-         if (!tile.hasMachine()) return null;
-         return tile.getMachine();
-      }
-
-      // --- Player (Pixel-Art Textur) with isometric offset ---
+      // --- Player (Pixel-Art Textur) mit Kamera-Offset ---
       private void drawPlayer(Graphics2D g2) {
-         int sx = isoRenderer.screenX(player.getX(), player.getY());
-         int sy = isoRenderer.screenY(player.getX(), player.getY()) - IsoRenderer.ISO_BOX_H;
+         int px = player.getX() * TILE_SIZE - cameraX;
+         int py = player.getY() * TILE_SIZE - cameraY;
          BufferedImage playerTex = textures.get("player");
          if (playerTex != null) {
-            g2.drawImage(playerTex, sx, sy, IsoRenderer.ISO_TILE_W, IsoRenderer.ISO_BOX_SPRITE_H, null);
+            g2.drawImage(playerTex, px, py, null);
          }
       }
 
-      // --- Mining Progress Bar (over player, isometric) ---
+      // --- Mining Progress Bar (über dem Spieler, Kamera-Offset) ---
       private void drawMiningBar(Graphics2D g2) {
          if (!miningInProgress || !enterHeld)
             return;
@@ -850,10 +796,8 @@ public class GameUI extends JFrame {
 
          int barWidth = 80;
          int barHeight = 10;
-         int sx = isoRenderer.screenX(player.getX(), player.getY());
-         int sy = isoRenderer.screenY(player.getX(), player.getY());
-         int bx = sx + IsoRenderer.ISO_TILE_W / 2 - barWidth / 2;
-         int by = sy - IsoRenderer.ISO_BOX_H - 20;
+         int bx = player.getX() * TILE_SIZE + TILE_SIZE / 2 - barWidth / 2 - cameraX;
+         int by = player.getY() * TILE_SIZE - 16 - cameraY;
 
          // Background
          g2.setColor(new Color(50, 50, 50, 200));
@@ -1134,6 +1078,48 @@ public class GameUI extends JFrame {
          g2.setFont(new Font("SansSerif", Font.ITALIC, 11));
          g2.drawString("[W/S] Auswahl  [Enter] Craften  [C] Schlie\u00DFen",
                px + 40, py + panelH - 28);
+      }
+
+      private BufferedImage getTileTexture(Tile tile) {
+         switch (tile.getType()) {
+            case IRON_DEPOSIT:
+               return textures.get("iron_deposit");
+            case COPPER_DEPOSIT:
+               return textures.get("copper_deposit");
+            case COAL_DEPOSIT:
+               return textures.get("coal_deposit");
+            case CONVEYOR_BELT:
+               // Direction-aware belt texture: fall back to non-rotated if no belt data found
+               return textures.get("conveyor_belt");
+            case MACHINE:
+               return textures.get("machine_bg");
+            default:
+               return textures.get("grass");
+         }
+      }
+
+      /**
+       * Returns the directional conveyor belt texture for the given ConveyorBelt.
+       * Converts ConveyorBelt.Direction to game.machine.Direction for getRotated().
+       */
+      private BufferedImage getConveyorBeltTexture(ConveyorBelt belt) {
+         game.machine.Direction machineDir = switch (belt.getDirection()) {
+            case UP    -> game.machine.Direction.UP;
+            case RIGHT -> game.machine.Direction.RIGHT;
+            case DOWN  -> game.machine.Direction.DOWN;
+            case LEFT  -> game.machine.Direction.LEFT;
+         };
+         return textures.getRotated("conveyor_belt", machineDir);
+      }
+
+      private BufferedImage getMachineTexture(BaseMachine machine) {
+         if (machine instanceof Grabber)
+            return textures.getRotated("grabber", machine.getDirection());
+         if (machine instanceof Miner)
+            return textures.getRotated("miner", machine.getDirection());
+         if (machine instanceof Smelter)
+            return textures.getRotated("smelter", machine.getDirection());
+         return null;
       }
 
       private BufferedImage getItemTexture(ItemType type) {

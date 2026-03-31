@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: game.integration.MachineStressAndReliabilityTest
 -------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.27 s -- in game.integration.MachineStressAndReliabilityTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.32 s -- in game.integration.MachineStressAndReliabilityTest
