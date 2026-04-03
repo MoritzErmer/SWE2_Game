@@ -11,7 +11,7 @@ import game.world.WorldMap;
  *
  * Der Greifer hat eine Richtung (source → destination) und arbeitet wie folgt:
  * - Nimmt Items vom Output-Buffer einer Maschine auf dem Quell-Tile
- * ODER vom Boden des Quell-Tiles
+ * ODER von einem Förderband-Quell-Tile
  * - Legt sie in den Input-Buffer einer Maschine auf dem Ziel-Tile
  * ODER auf den Boden des Ziel-Tiles
  * - Verbraucht Kohle aus seinem eigenen Input-Buffer als Brennstoff
@@ -154,8 +154,8 @@ public class Grabber extends BaseMachine {
          return new ItemStack(type, 1);
       }
 
-      // Priorität 2: Item auf dem Boden
-      if (srcTile.hasItem()) {
+      // Priorität 2: Boden-Item nur von Förderband-Tiles entnehmen
+      if (srcTile.isConveyorBelt() && srcTile.hasItem()) {
          ItemStack ground = srcTile.getItemOnGround();
          ItemType type = ground.getType();
          ground.remove(1);
@@ -178,18 +178,12 @@ public class Grabber extends BaseMachine {
       }
 
       // Priorität 2: Auf den Boden legen
-      if (!dstTile.hasItem()) {
+      if (dstTile.canAcceptGroundItem()) {
          dstTile.setItemOnGround(item);
          return true;
       }
 
-      // Auf bestehenden Stack addieren
-      if (dstTile.getItemOnGround().getType() == item.getType()) {
-         dstTile.getItemOnGround().add(item.getAmount());
-         return true;
-      }
-
-      return false; // Ziel belegt mit anderem Item
+      return false; // Ziel belegt oder nicht erlaubt
    }
 
    /**
@@ -200,9 +194,7 @@ public class Grabber extends BaseMachine {
          srcTile.getMachine().getOutputBuffer().add(item.getAmount());
       } else if (srcTile.hasMachine()) {
          srcTile.getMachine().setOutputBuffer(item);
-      } else if (srcTile.hasItem()) {
-         srcTile.getItemOnGround().add(item.getAmount());
-      } else {
+      } else if (srcTile.canAcceptGroundItem()) {
          srcTile.setItemOnGround(item);
       }
    }

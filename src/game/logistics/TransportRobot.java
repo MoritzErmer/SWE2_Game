@@ -1,6 +1,5 @@
 package game.logistics;
 
-import game.entity.ItemStack;
 import game.world.Tile;
 import game.world.WorldMap;
 
@@ -38,29 +37,31 @@ public class TransportRobot implements Runnable {
    public void run() {
       while (running.get() && !Thread.currentThread().isInterrupted()) {
          try {
-            // Phase 1: Zum Quell-Tile gehen und Item aufnehmen
+            // Phase 1: Zum Quell-Tile gehen
             moveTowards(sourceX, sourceY);
             if (x == sourceX && y == sourceY) {
                Tile src = map.getTile(sourceX, sourceY);
+
+               boolean hasSourceItem;
                src.getLock().lock();
                try {
-                  ItemStack picked = src.pickupItem();
-                  if (picked != null) {
-                     // Phase 2: Zum Ziel-Tile gehen und Item ablegen
-                     while (running.get() && (x != targetX || y != targetY)) {
-                        moveTowards(targetX, targetY);
-                        Thread.sleep(300); // Bewegungsgeschwindigkeit
-                     }
-                     Tile dst = map.getTile(targetX, targetY);
-                     dst.getLock().lock();
-                     try {
-                        dst.setItemOnGround(picked);
-                     } finally {
-                        dst.getLock().unlock();
-                     }
-                  }
+                  hasSourceItem = src.hasItem();
                } finally {
                   src.getLock().unlock();
+               }
+
+               if (hasSourceItem) {
+                  // Phase 2: Zum Ziel-Tile gehen und transferieren
+                  while (running.get() && (x != targetX || y != targetY)) {
+                     moveTowards(targetX, targetY);
+                     Thread.sleep(300); // Bewegungsgeschwindigkeit
+                  }
+                  if (!running.get() || Thread.currentThread().isInterrupted()) {
+                     return;
+                  }
+
+                  Tile dst = map.getTile(targetX, targetY);
+                  map.transferItem(src, dst);
                }
             }
             Thread.sleep(500); // Warte bevor nächster Zyklus

@@ -509,6 +509,11 @@ public class GameUI extends JFrame {
             return;
 
          ItemType type = selected.getType();
+         boolean placingMachine = type == ItemType.MINER_KIT
+               || type == ItemType.SMELTER_KIT
+               || type == ItemType.GRABBER_KIT;
+         if (placingMachine && !tile.canPlaceMachine())
+            return;
 
          // Miner platzieren (nur auf Ressourcen-Tile)
          if (type == ItemType.MINER_KIT) {
@@ -648,7 +653,7 @@ public class GameUI extends JFrame {
       Tile tile = map.getTile(player.getX(), player.getY());
       tile.getLock().lock();
       try {
-         if (tile.hasMachine())
+         if (!tile.canPlaceMachine())
             return;
          BaseMachine machine;
          if ("miner".equals(type) && tile.isResourceDeposit()) {
