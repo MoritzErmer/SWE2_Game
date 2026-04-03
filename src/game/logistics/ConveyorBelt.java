@@ -11,7 +11,7 @@ public class ConveyorBelt {
    private final Tile tile;
    private final int x;
    private final int y;
-   private final Direction direction;
+   private volatile Direction direction;
 
    public enum Direction {
       UP(0, -1), DOWN(0, 1), LEFT(-1, 0), RIGHT(1, 0);
@@ -21,6 +21,20 @@ public class ConveyorBelt {
       Direction(int dx, int dy) {
          this.dx = dx;
          this.dy = dy;
+      }
+
+      public Direction rotateClockwise() {
+         switch (this) {
+            case UP:
+               return RIGHT;
+            case RIGHT:
+               return DOWN;
+            case DOWN:
+               return LEFT;
+            case LEFT:
+            default:
+               return UP;
+         }
       }
    }
 
@@ -46,6 +60,10 @@ public class ConveyorBelt {
 
    public Direction getDirection() {
       return direction;
+   }
+
+   public void rotateClockwise() {
+      direction = direction.rotateClockwise();
    }
 }
 

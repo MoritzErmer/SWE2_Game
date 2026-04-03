@@ -42,6 +42,8 @@ public class PixelTextures {
       cache.put("machine_bg", generateMachineBg());
       cache.put("miner", generateMinerDirectional());
       cache.put("smelter", generateSmelterDirectional());
+      cache.put("forge", generateForgeIdleDirectional());
+      cache.put("forge_idle", generateForgeIdleDirectional());
       cache.put("player", generatePlayer());
       cache.put("item_iron_ore", generateItemTexture(new Color(139, 90, 43), new Color(100, 65, 30)));
       cache.put("item_copper_ore", generateItemTexture(new Color(184, 115, 51), new Color(140, 85, 35)));
@@ -53,10 +55,12 @@ public class PixelTextures {
       cache.put("item_miner_kit", generateItemTexture(new Color(200, 180, 60), new Color(160, 140, 40)));
       cache.put("item_smelter_kit", generateItemTexture(new Color(220, 100, 50), new Color(180, 70, 30)));
       cache.put("item_grabber_kit", generateItemTexture(new Color(120, 200, 120), new Color(80, 160, 80)));
+      cache.put("item_forge_kit", generateItemTexture(new Color(145, 120, 85), new Color(105, 85, 60)));
       cache.put("grabber", generateGrabberTexture());
       generateConveyorBeltFrames();
       generateMinerFrames();
       generateSmelterFrames();
+      generateForgeFrames();
       generateGrabberFrames();
    }
 
@@ -167,6 +171,42 @@ public class PixelTextures {
       cache.put("smelter_f1", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(230, 100, 20) }));
       cache.put("smelter_f2", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(255, 140, 10) }));
    }
+
+      private void generateForgeFrames() {
+      Color bg = new Color(0, 0, 0, 0);
+      Color body = new Color(105, 85, 70);
+      Color dark = new Color(70, 55, 45);
+      Color chimney = new Color(95, 95, 95);
+
+      int[][] idle = {
+         { 0, 0, 4, 0, 0, 0, 0, 0 },
+         { 0, 2, 1, 1, 1, 2, 0, 0 },
+         { 0, 1, 1, 1, 1, 1, 0, 0 },
+         { 0, 1, 2, 2, 1, 1, 3, 3 },
+         { 0, 1, 2, 2, 1, 1, 3, 3 },
+         { 0, 1, 1, 1, 1, 1, 0, 0 },
+         { 0, 2, 1, 1, 1, 2, 0, 0 },
+         { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+
+      int[][] activePulse = {
+         { 0, 0, 4, 0, 0, 0, 0, 0 },
+         { 0, 2, 1, 1, 1, 2, 0, 0 },
+         { 0, 1, 1, 1, 1, 1, 3, 0 },
+         { 0, 1, 2, 2, 1, 1, 3, 3 },
+         { 0, 1, 2, 2, 1, 1, 3, 3 },
+         { 0, 1, 1, 1, 1, 1, 3, 0 },
+         { 0, 2, 1, 1, 1, 2, 0, 0 },
+         { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+
+      cache.put("forge_idle", buildFromPalette(idle,
+         new Color[]{ bg, body, dark, new Color(150, 60, 30), chimney }));
+      cache.put("forge_f0", buildFromPalette(idle,
+         new Color[]{ bg, body, dark, new Color(245, 135, 45), chimney }));
+      cache.put("forge_f1", buildFromPalette(activePulse,
+         new Color[]{ bg, body, dark, new Color(255, 185, 60), chimney }));
+      }
 
    private void generateGrabberFrames() {
       Color bg   = new Color(0, 0, 0, 0);
@@ -516,6 +556,27 @@ public class PixelTextures {
             { 0, 0, 0, 0, 0, 0, 0, 0 },
       };
       return buildFromPalette(map, new Color[] { bg, body, dark, fire });
+   }
+
+   // --- Forge: Nach RECHTS orientiert (Auslass vorne/rechts) ---
+   private BufferedImage generateForgeIdleDirectional() {
+      Color bg = new Color(0, 0, 0, 0);
+      Color body = new Color(105, 85, 70);
+      Color dark = new Color(70, 55, 45);
+      Color glow = new Color(150, 60, 30);
+      Color chimney = new Color(95, 95, 95);
+
+      int[][] map = {
+            { 0, 0, 4, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 1, 1, 1, 1, 1, 0, 0 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 1, 1, 1, 1, 0, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      return buildFromPalette(map, new Color[] { bg, body, dark, glow, chimney });
    }
 
    // ==================== Rotation ====================

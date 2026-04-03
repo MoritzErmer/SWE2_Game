@@ -99,6 +99,14 @@ public abstract class BaseMachine {
       return false;
    }
 
+   /**
+    * Automation-Hook: versucht Input von einer bestimmten Seite einzulegen.
+    * Standardverhalten bleibt abwärtskompatibel und ignoriert die Seite.
+    */
+   public boolean tryInsertInputFromSide(ItemStack item, Direction incomingSide) {
+      return tryInsertInput(item);
+   }
+
    public ItemStack getOutputBuffer() {
       return outputBuffer;
    }
@@ -112,6 +120,14 @@ public abstract class BaseMachine {
       ItemStack out = outputBuffer;
       outputBuffer = null;
       return out;
+   }
+
+   /**
+    * Automation-Hook: ob Output von einer bestimmten Seite entnommen werden darf.
+    * Standard: von allen Seiten erlaubt.
+    */
+   public boolean canExtractOutputFromSide(Direction extractionSide) {
+      return true;
    }
 
    /** Prüft ob der Output-Buffer leer ist. */

@@ -14,6 +14,9 @@ class WorldMapTest {
         Tile from = map.getTile(0, 0);
         Tile to = map.getTile(1, 0);
 
+        from.setType(TileType.CONVEYOR_BELT);
+        to.setType(TileType.CONVEYOR_BELT);
+
         from.getLock().lock();
         try {
             from.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 2));
@@ -24,10 +27,11 @@ class WorldMapTest {
         boolean moved = map.transferItem(from, to);
 
         assertTrue(moved);
-        assertFalse(from.hasItem());
+        assertTrue(from.hasItem());
+        assertEquals(1, from.getItemOnGround().getAmount());
         assertTrue(to.hasItem());
         assertEquals(ItemType.IRON_ORE, to.getItemOnGround().getType());
-        assertEquals(2, to.getItemOnGround().getAmount());
+        assertEquals(1, to.getItemOnGround().getAmount());
     }
 
     @Test
@@ -35,6 +39,9 @@ class WorldMapTest {
         WorldMap map = new WorldMap(3, 3);
         Tile from = map.getTile(0, 0);
         Tile to = map.getTile(1, 0);
+
+        from.setType(TileType.CONVEYOR_BELT);
+        to.setType(TileType.CONVEYOR_BELT);
 
         from.getLock().lock();
         to.getLock().lock();
