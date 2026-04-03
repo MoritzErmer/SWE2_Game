@@ -899,7 +899,7 @@ public class GameUI extends JFrame {
 
          // Controls hint
          g2.setColor(new Color(150, 150, 150));
-         g2.drawString("[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar",
+         g2.drawString("[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar [R]Rotate [Q]Deconstruct [Left]Place [Right]Interact",
                176 + modeOffset, hudY + 14);
 
          // HUD notification (save/load feedback, fades after 3 seconds)
