@@ -63,6 +63,7 @@ public class Main {
       player.addItem(ItemType.MINER_KIT, 10);
       player.addItem(ItemType.SMELTER_KIT, 10);
       player.addItem(ItemType.GRABBER_KIT, 10);
+      player.addItem(ItemType.FORGE_KIT, 10);
       player.addItem(ItemType.CONVEYOR_BELT_ITEM, 50);
 
       // --- Maschinen, Belts, Roboter (initial leer, werden im Spiel platziert) ---
@@ -76,7 +77,7 @@ public class Main {
       // --- UI im EDT starten ---
       SwingUtilities.invokeLater(() -> {
          GameUI ui = new GameUI(map, player, gameMode);
-         ui.setSaveContext(supervisor, machines, belts);
+         ui.setSaveContext(supervisor, supervisor.getMachines(), supervisor.getBelts());
 
          // Creative mode is applied to CraftingManager in the GameUI constructor.
 

@@ -17,7 +17,8 @@ public enum ItemType {
    CONVEYOR_BELT_ITEM("Conveyor Belt", 0, new Color(100, 100, 110), true),
    MINER_KIT("Miner", 0, new Color(200, 180, 60), true),
    SMELTER_KIT("Smelter", 0, new Color(220, 100, 50), true),
-   GRABBER_KIT("Grabber", 0, new Color(120, 200, 120), true);
+   GRABBER_KIT("Grabber", 0, new Color(120, 200, 120), true),
+   FORGE_KIT("Forge", 0, new Color(145, 120, 85), true);
 
    private final String displayName;
    private final int miningTimeMs; // Abbauzeit in Millisekunden (0 = nicht abbaubar)

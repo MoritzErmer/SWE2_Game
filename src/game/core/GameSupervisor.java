@@ -169,6 +169,15 @@ public class GameSupervisor {
       System.out.println("[GameSupervisor] Belt abgemeldet bei (" + x + "," + y + ")");
    }
 
+   public void rotateBelt(int x, int y) {
+      ConveyorBelt belt = beltIndex.get(beltKey(x, y));
+      if (belt == null) {
+         return;
+      }
+      belt.rotateClockwise();
+      System.out.println("[GameSupervisor] Belt rotiert bei (" + x + "," + y + ") -> " + belt.getDirection());
+   }
+
    public void registerRobot(TransportRobot robot) {
       if (!robots.contains(robot)) {
          robots.add(robot);

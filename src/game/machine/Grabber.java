@@ -94,7 +94,6 @@ public class Grabber extends BaseMachine {
       Tile dstTile = worldMap.getTile(dstX, dstY);
 
       // Lock-Ordering: Sortiere nach identityHashCode um Deadlocks zu vermeiden
-      Tile first, second, third;
       Tile[] sorted = sortByHash(tile, srcTile, dstTile);
       sorted[0].getLock().lock();
       try {
@@ -122,6 +121,10 @@ public class Grabber extends BaseMachine {
       if (!hasFuel())
          return;
 
+      // Ohne Maschinenziel darf nur auf ein freies Förderband geliefert werden.
+      if (!dstTile.hasMachine() && (!dstTile.isConveyorBelt() || dstTile.hasItem()))
+         return;
+
       // Item von Quelle holen
       ItemStack item = extractFromSource(srcTile);
       if (item == null)
@@ -140,22 +143,27 @@ public class Grabber extends BaseMachine {
    }
 
    /**
-    * Entnimmt 1 Item von der Quelle (Maschinen-Output > Boden-Item).
+    * Entnimmt 1 Item von der Quelle (Maschinen-Output).
     */
    private ItemStack extractFromSource(Tile srcTile) {
       // Priorität 1: Output-Buffer einer Maschine auf dem Quell-Tile
       if (srcTile.hasMachine() && srcTile.getMachine().hasOutput()) {
-         ItemStack out = srcTile.getMachine().getOutputBuffer();
-         ItemType type = out.getType();
-         out.remove(1);
-         if (out.getAmount() <= 0) {
-            srcTile.getMachine().setOutputBuffer(null);
+         Direction extractionSide = Direction.fromDxDy(-sourceDx, -sourceDy);
+         if (canExtractOutputFromSideCompat(srcTile.getMachine(), extractionSide)) {
+            ItemStack out = srcTile.getMachine().getOutputBuffer();
+            if (out != null && out.getAmount() > 0) {
+               ItemType type = out.getType();
+               out.remove(1);
+               if (out.getAmount() <= 0) {
+                  srcTile.getMachine().setOutputBuffer(null);
+               }
+               return new ItemStack(type, 1);
+            }
          }
-         return new ItemStack(type, 1);
       }
 
-      // Priorität 2: Item auf dem Boden
-      if (srcTile.hasItem()) {
+      // Priorität 2: Item auf dem Boden (nur auf Förderbändern)
+      if (srcTile.isConveyorBelt() && srcTile.hasItem()) {
          ItemStack ground = srcTile.getItemOnGround();
          ItemType type = ground.getType();
          ground.remove(1);
@@ -174,18 +182,17 @@ public class Grabber extends BaseMachine {
    private boolean deliverToDestination(Tile dstTile, ItemStack item) {
       // Priorität 1: Input-Buffer einer Maschine auf dem Ziel-Tile
       if (dstTile.hasMachine()) {
-         return dstTile.getMachine().tryInsertInput(item);
+         Direction incomingSide = Direction.fromDxDy(-destDx, -destDy);
+         return tryInsertInputFromSideCompat(dstTile.getMachine(), item, incomingSide);
       }
 
-      // Priorität 2: Auf den Boden legen
+      // Priorität 2: Auf den Boden legen (nur auf Förderbändern)
+      if (!dstTile.isConveyorBelt()) {
+         return false;
+      }
+
       if (!dstTile.hasItem()) {
          dstTile.setItemOnGround(item);
-         return true;
-      }
-
-      // Auf bestehenden Stack addieren
-      if (dstTile.getItemOnGround().getType() == item.getType()) {
-         dstTile.getItemOnGround().add(item.getAmount());
          return true;
       }
 
@@ -194,16 +201,72 @@ public class Grabber extends BaseMachine {
 
    /**
     * Legt ein Item zurück zur Quelle wenn Ziel voll war.
+    *
+    * Das Zurücklegen darf niemals stillschweigend fehlschlagen, da sonst Items
+    * verloren gehen können. Wenn weder Maschinen-Output noch Bodenablage möglich
+    * ist, wird deshalb explizit ein Fehler ausgelöst.
     */
    private void returnToSource(Tile srcTile, ItemStack item) {
       if (srcTile.hasMachine() && srcTile.getMachine().hasOutput()) {
-         srcTile.getMachine().getOutputBuffer().add(item.getAmount());
-      } else if (srcTile.hasMachine()) {
+         ItemStack out = srcTile.getMachine().getOutputBuffer();
+         if (out != null && out.getType() == item.getType()) {
+            out.add(item.getAmount());
+            return;
+         }
+      }
+
+      if (srcTile.hasMachine() && !srcTile.getMachine().hasOutput()) {
          srcTile.getMachine().setOutputBuffer(item);
-      } else if (srcTile.hasItem()) {
-         srcTile.getItemOnGround().add(item.getAmount());
-      } else {
-         srcTile.setItemOnGround(item);
+         return;
+      }
+
+      if (!srcTile.hasMachine() && srcTile.isConveyorBelt()) {
+         if (!srcTile.hasItem()) {
+            srcTile.setItemOnGround(item);
+            return;
+         }
+         if (srcTile.getItemOnGround().getType() == item.getType()) {
+            return;
+         }
+      }
+
+      throw new IllegalStateException("Failed to return item to source tile: " + item);
+   }
+
+   /**
+    * Kompatibilitäts-Helfer: side-aware Output-Extraction falls vorhanden,
+    * ansonsten permissiver Fallback.
+    */
+   private boolean canExtractOutputFromSideCompat(BaseMachine machine, Direction extractionSide) {
+      try {
+         java.lang.reflect.Method method = machine.getClass().getMethod(
+               "canExtractOutputFromSide", Direction.class);
+         Object result = method.invoke(machine, extractionSide);
+         if (result instanceof Boolean) {
+            return (Boolean) result;
+         }
+         return true;
+      } catch (NoSuchMethodException ignored) {
+         return true;
+      } catch (ReflectiveOperationException e) {
+         return false;
+      }
+   }
+
+   /**
+    * Kompatibilitäts-Helfer: side-aware Input falls vorhanden,
+    * sonst normaler tryInsertInput-Fallback.
+    */
+   private boolean tryInsertInputFromSideCompat(BaseMachine machine, ItemStack item, Direction incomingSide) {
+      try {
+         java.lang.reflect.Method method = machine.getClass().getMethod(
+               "tryInsertInputFromSide", ItemStack.class, Direction.class);
+         Object result = method.invoke(machine, item, incomingSide);
+         return result instanceof Boolean && (Boolean) result;
+      } catch (NoSuchMethodException ignored) {
+         return machine.tryInsertInput(item);
+      } catch (ReflectiveOperationException e) {
+         return false;
       }
    }
 

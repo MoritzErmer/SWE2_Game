@@ -9,6 +9,7 @@ import game.entity.ItemType;
 import game.entity.PlayerCharacter;
 import game.logistics.ConveyorBelt;
 import game.machine.BaseMachine;
+import game.machine.Forge;
 import game.machine.Grabber;
 import game.machine.Miner;
 import game.machine.Smelter;
@@ -114,16 +115,21 @@ public class GameUI extends JFrame {
       Tile tile = map.getTile(player.getX(), player.getY());
       tile.getLock().lock();
       try {
-         if (!tile.hasMachine())
+         if (!tile.hasMachine()) {
+            if (tile.getType() == TileType.CONVEYOR_BELT && supervisor != null) {
+               supervisor.rotateBelt(player.getX(), player.getY());
+            }
             return;
+         }
          BaseMachine machine = tile.getMachine();
-         // Nur Greifer, Miner, Smelter rotierbar
+         // Nur Greifer besitzt eine Sonderrotation; alle anderen Maschinen drehen
+         // ihre Richtung normal im Uhrzeigersinn.
          if (machine instanceof Grabber) {
             ((Grabber) machine).rotate();
             machine.setDirection(
                   game.machine.Direction.fromDxDy(((Grabber) machine).getDestDx(), ((Grabber) machine).getDestDy()));
          } else {
-            // Miner/Smelter: Richtung rotieren
+            // Miner/Smelter/Forge: Richtung rotieren
             machine.setDirection(machine.getDirection().rotateClockwise());
          }
       } finally {
@@ -157,6 +163,8 @@ public class GameUI extends JFrame {
             player.addItem(ItemType.SMELTER_KIT, 1);
          } else if (machine instanceof Grabber) {
             player.addItem(ItemType.GRABBER_KIT, 1);
+         } else if (machine instanceof Forge) {
+            player.addItem(ItemType.FORGE_KIT, 1);
          } else {
             return;
          }
@@ -494,6 +502,23 @@ public class GameUI extends JFrame {
 
    // ==================== ITEM PLACEMENT ====================
 
+   /** Kompatibler Maschinen-Placement-Check. */
+   private boolean canPlaceMachineOnTile(Tile tile) {
+      try {
+         java.lang.reflect.Method method = tile.getClass().getMethod("canPlaceMachine");
+         Object result = method.invoke(tile);
+         if (result instanceof Boolean) {
+            return (Boolean) result;
+         }
+      } catch (NoSuchMethodException ignored) {
+         // Fallback unten
+      } catch (ReflectiveOperationException e) {
+         return false;
+      }
+
+      return !tile.hasItem() && (tile.getType() == TileType.EMPTY || tile.isResourceDeposit());
+   }
+
    /** Platziert das ausgewählte Hotbar-Item auf einem Tile per Linksklick. */
    private void placeItemOnTile(int tx, int ty) {
       ItemStack selected = player.getSelectedItem();
@@ -509,6 +534,12 @@ public class GameUI extends JFrame {
             return;
 
          ItemType type = selected.getType();
+         boolean placingMachine = type == ItemType.MINER_KIT
+               || type == ItemType.SMELTER_KIT
+               || type == ItemType.GRABBER_KIT
+               || type == ItemType.FORGE_KIT;
+            if (placingMachine && !canPlaceMachineOnTile(tile))
+            return;
 
          // Miner platzieren (nur auf Ressourcen-Tile)
          if (type == ItemType.MINER_KIT) {
@@ -528,6 +559,18 @@ public class GameUI extends JFrame {
          if (type == ItemType.SMELTER_KIT) {
             if (player.consumeSelectedItem(1)) {
                Smelter machine = new Smelter(tile);
+               machine.setDirection(lastDirection);
+               tile.setMachine(machine);
+               if (onMachinePlaced != null)
+                  onMachinePlaced.accept(machine);
+            }
+            return;
+         }
+
+         // Forge platzieren
+         if (type == ItemType.FORGE_KIT) {
+            if (player.consumeSelectedItem(1)) {
+               Forge machine = new Forge(tile);
                machine.setDirection(lastDirection);
                tile.setMachine(machine);
                if (onMachinePlaced != null)
@@ -568,7 +611,7 @@ public class GameUI extends JFrame {
          }
 
          // Normales Item ablegen
-         if (!tile.hasItem()) {
+         if (tile.canAcceptGroundItem()) {
             if (player.consumeSelectedItem(1)) {
                tile.setItemOnGround(new ItemStack(type, 1));
             }
@@ -633,6 +676,23 @@ public class GameUI extends JFrame {
             }
             return;
          }
+
+         // Forge: Eisenplatten oder Kohle einfüllen aus Hotbar
+         if (machine instanceof Forge) {
+            ItemStack selected = player.getSelectedItem();
+            if (selected != null) {
+               ItemType type = selected.getType();
+               if (type == ItemType.IRON_PLATE || type == ItemType.COAL) {
+                  int toAdd = (type == ItemType.COAL)
+                        ? Math.min(8, selected.getAmount())
+                        : Math.min(5, selected.getAmount());
+                  if (machine.tryInsertInput(new ItemStack(type, toAdd))) {
+                     player.consumeSelectedItem(toAdd);
+                  }
+               }
+            }
+            return;
+         }
       } finally {
          tile.getLock().unlock();
       }
@@ -655,6 +715,8 @@ public class GameUI extends JFrame {
             machine = new Miner(tile);
          } else if ("smelter".equals(type)) {
             machine = new Smelter(tile);
+         } else if ("forge".equals(type)) {
+            machine = new Forge(tile);
          } else {
             return;
          }
@@ -728,9 +790,13 @@ public class GameUI extends JFrame {
                         .filter(b -> b.getX() == fx && b.getY() == fy)
                         .findFirst()
                         .orElse(null);
+                  int beltFrame = Math.floorMod(animFrame / 3, 4);
                   tileTex = (beltAtTile != null)
-                        ? getConveyorBeltTexture(beltAtTile, Math.floorMod(animFrame / 3, 4))
-                        : textures.get("conveyor_belt");
+                        ? getConveyorBeltTexture(beltAtTile, beltFrame)
+                        : textures.get("conveyor_belt_f" + beltFrame);
+                  if (tileTex == null) {
+                     tileTex = textures.get("conveyor_belt");
+                  }
                } else {
                   tileTex = getTileTexture(tile);
                }
@@ -1107,12 +1173,22 @@ public class GameUI extends JFrame {
        * Converts ConveyorBelt.Direction to game.machine.Direction for getRotated().
        */
       private BufferedImage getConveyorBeltTexture(ConveyorBelt belt, int frame) {
-         game.machine.Direction machineDir = switch (belt.getDirection()) {
-            case UP    -> game.machine.Direction.UP;
-            case RIGHT -> game.machine.Direction.RIGHT;
-            case DOWN  -> game.machine.Direction.DOWN;
-            case LEFT  -> game.machine.Direction.LEFT;
-         };
+         game.machine.Direction machineDir;
+         switch (belt.getDirection()) {
+            case UP:
+               machineDir = game.machine.Direction.UP;
+               break;
+            case RIGHT:
+               machineDir = game.machine.Direction.RIGHT;
+               break;
+            case DOWN:
+               machineDir = game.machine.Direction.DOWN;
+               break;
+            case LEFT:
+            default:
+               machineDir = game.machine.Direction.LEFT;
+               break;
+         }
          String key = "conveyor_belt_f" + frame;
          BufferedImage tex = textures.getRotated(key, machineDir);
          return (tex != null) ? tex : textures.getRotated("conveyor_belt", machineDir);
@@ -1133,6 +1209,17 @@ public class GameUI extends JFrame {
             int f = Math.floorMod(frame / 10, 3);
             BufferedImage t = textures.getRotated("smelter_f" + f, machine.getDirection());
             return (t != null) ? t : textures.getRotated("smelter", machine.getDirection());
+         }
+         if (machine instanceof Forge) {
+            Forge forge = (Forge) machine;
+            if (forge.isActiveForAnimation()) {
+               int f = Math.floorMod(frame / 10, 2);
+               BufferedImage t = textures.getRotated("forge_f" + f, machine.getDirection());
+               return (t != null) ? t : textures.getRotated("forge_idle", machine.getDirection());
+            }
+
+            BufferedImage t = textures.getRotated("forge_idle", machine.getDirection());
+            return (t != null) ? t : textures.getRotated("forge", machine.getDirection());
          }
          return null;
       }
@@ -1159,6 +1246,8 @@ public class GameUI extends JFrame {
                return textures.get("item_smelter_kit");
             case GRABBER_KIT:
                return textures.get("item_grabber_kit");
+            case FORGE_KIT:
+               return textures.get("item_forge_kit");
             default:
                return null;
          }

@@ -47,6 +47,10 @@ public class Tile {
    public void setType(TileType type) {
       this.type = type;
       this.originalType = type;
+      // Ground items are only allowed on conveyor belts.
+      if (type != TileType.CONVEYOR_BELT) {
+         this.itemOnGround = null;
+      }
    }
 
    /** Gibt den ursprünglichen Tile-Typ zurück (vor Maschinen-Platzierung). */
@@ -64,6 +68,12 @@ public class Tile {
     * aufrufen!
     */
    public void setItemOnGround(ItemStack item) {
+      if (item != null && !isConveyorBelt()) {
+         return;
+      }
+      if (item != null && machine != null) {
+         return;
+      }
       this.itemOnGround = item;
    }
 
@@ -79,9 +89,17 @@ public class Tile {
    }
 
    public void setMachine(BaseMachine machine) {
-      this.machine = machine;
-      if (machine != null) {
-         this.type = TileType.MACHINE;
+      lock.lock();
+      try {
+         if (machine != null && itemOnGround != null) {
+            throw new IllegalStateException("Cannot place machine on tile that already contains an item.");
+         }
+         this.machine = machine;
+         if (machine != null) {
+            this.type = TileType.MACHINE;
+         }
+      } finally {
+         lock.unlock();
       }
    }
 
@@ -100,6 +118,22 @@ public class Tile {
 
    public boolean hasItem() {
       return itemOnGround != null;
+   }
+
+   /** Boden-Items sind nur auf Förderbändern erlaubt. */
+   public boolean canAcceptGroundItem() {
+      return isConveyorBelt() && machine == null && itemOnGround == null;
+   }
+
+   public boolean isConveyorBelt() {
+      return type == TileType.CONVEYOR_BELT;
+   }
+
+   /** Maschinen dürfen nur auf leeren oder Ressourcen-Tiles ohne Boden-Item platziert werden. */
+   public boolean canPlaceMachine() {
+      return machine == null
+            && itemOnGround == null
+            && (type == TileType.EMPTY || isResourceDeposit());
    }
 
    public boolean isEmpty() {

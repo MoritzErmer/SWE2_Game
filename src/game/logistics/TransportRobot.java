@@ -52,11 +52,35 @@ public class TransportRobot implements Runnable {
                         Thread.sleep(300); // Bewegungsgeschwindigkeit
                      }
                      Tile dst = map.getTile(targetX, targetY);
+                     boolean delivered = false;
                      dst.getLock().lock();
                      try {
-                        dst.setItemOnGround(picked);
+                        if (dst.canAcceptGroundItem()) {
+                           dst.setItemOnGround(picked);
+                           delivered = true;
+                        } else if (dst.isConveyorBelt()
+                              && dst.hasItem()
+                              && dst.getItemOnGround().getType() == picked.getType()) {
+                           dst.getItemOnGround().add(picked.getAmount());
+                           delivered = true;
+                        }
                      } finally {
                         dst.getLock().unlock();
+                     }
+
+                     if (!delivered) {
+                        src.getLock().lock();
+                        try {
+                           if (src.canAcceptGroundItem()) {
+                              src.setItemOnGround(picked);
+                           } else if (src.isConveyorBelt()
+                                 && src.hasItem()
+                                 && src.getItemOnGround().getType() == picked.getType()) {
+                              src.getItemOnGround().add(picked.getAmount());
+                           }
+                        } finally {
+                           src.getLock().unlock();
+                        }
                      }
                   }
                } finally {
