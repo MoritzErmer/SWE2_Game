@@ -1,70 +1,62 @@
 #set page(paper: "a4", margin: (x: 2.2cm, y: 2.2cm))
 #set text(lang: "de", size: 11pt)
 #set par(justify: true, leading: 0.68em)
-#set heading(numbering: "1.")
+#set heading(numbering: "1.1.1", depth: 3)
 #set math.equation(numbering: "(1)")
-
-#show heading.where(level: 1): it => {
-  v(0.8em)
-  text(14pt, weight: "bold", it.body)
-  v(0.4em)
-}
-
-#show heading.where(level: 2): it => {
-  v(0.6em)
-  text(12pt, weight: "bold", it.body)
-  v(0.3em)
-}
 
 #let repo = "SWE2_Game"
 #let course = "Software Engineering II (TES23)"
 #let semester = "WS 2025/2026"
 
-= Programmentwurf: Multithreaded 2D Automation Game
+#set document(
+  title: [Programmentwurf: Multithreaded 2D Automation Game]
+)
 
-*Projekt:* #repo  \
+#title()
+
 *Kurs:* #course  \
 *Semester:* #semester  \
-*Datum:* 18.03.2026
+*Datum:* 8.04.2026 \
+*Gruppenmitglieder:* Moritz Ermer, Tom Gelhorn, Malte Schröter
 
-== 1 Projektidee
+= Projektidee
 
-Das Projekt implementiert ein zweidimensionales Echtzeit-Automationsspiel mit grafischer Benutzeroberflaeche (Java Swing). Die Spielenden bewegen sich auf einer tilebasierten Karte, bauen Ressourcen ab und errichten eine Produktionskette aus Minern, Greifern, Foerderbaendern und Schmelzoefen. Das Spiel ist als nebenlaeufiges System entworfen: Produktion, Logistik, Kollisionserkennung und Benutzerinteraktion laufen parallel.
+Das Projekt implementiert ein zweidimensionales Echtzeit-Automationsspiel mit grafischer Benutzeroberfläche (Java Swing). Die Spielenden bewegen sich auf einer tilebasierten Karte, bauen Ressourcen ab und errichten eine Produktionskette aus Minern, Greifern, Förderbändern und Schmelzöfen. Das Spiel ist als nebenläufiges System entworfen: Produktion, Logistik, Kollisionserkennung und Benutzerinteraktion laufen parallel.
 
-Die Spielidee ist bewusst auf die Verbindung von Gameplay und Nebenlaeufigkeit ausgelegt. Ein sequentielles Modell waere fuer die geforderte Echtzeit-Simulation mit simultanen Entitaeten nicht geeignet, da Fortschritt und Reaktionszeit von Produktion und Transport ansonsten direkt an die UI-Ereignisse gekoppelt waeren.
+Die Spielidee ist bewusst auf die Verbindung von Gameplay und Nebenläufigkeit ausgelegt. Ein sequentielles Modell wäre für die geforderte Echtzeit-Simulation mit simultanen Entitäten nicht geeignet, da Fortschritt und Reaktionszeit von Produktion und Transport ansonsten direkt an die UI-Ereignisse gekoppelt wären.
 
-== 2 Spielregeln und Gameplay
+= Spielregeln und Gameplay
 
-=== 2.1 Kernspielschleife
+== Kernspielschleife
 
-1. Die Spielfigur bewegt sich per Tastatur (WASD) ueber die Karte.
-2. Auf Ressourcentiles koennen Vorkommen per Enter-Taste abgebaut werden.
-3. Aus gewonnenen Materialien werden ueber das Crafting-Menue Maschinen und Infrastruktur hergestellt.
+1. Die Spielfigur bewegt sich per Tastatur (WASD) über die Karte.
+2. Auf Ressourcentiles können Vorkommen per Enter-Taste abgebaut werden.
+3. Aus gewonnenen Materialien werden über das Crafting-Menü Maschinen und Infrastruktur hergestellt.
 4. Maschinen werden auf der Karte platziert und arbeiten autonom.
 5. Ziel ist der Aufbau einer stabilen Produktionspipeline mit kontinuierlichem Materialfluss.
 
-=== 2.2 Interaktion und Bedienung
+== Interaktion und Bedienung
 
 - `WASD`: Bewegung
 - `Enter`: manuelles Mining
 - `E`: Inventar
-- `C`: Crafting-Menue
+- `C`: Crafting-Menü
 - `1..9`: Hotbar-Auswahl
 - Linksklick: Item/Maschine platzieren
 - Rechtsklick: Maschineninteraktion (Input/Output)
 - `R`: Rotation platzierter Maschinen
-- `Q`: Dekonstruktion (Maschinen und Foerderbaender)
+- `Q`: Dekonstruktion (Maschinen und Förderbänder)
 
-=== 2.3 Wirtschaft und Produktion
+== Wirtschaft und Produktion
 
 - Miner erzeugen Erz aus Lagerstaetten.
 - Greifer transportieren Items zwischen Quell- und Zieltile.
 - Schmelzer wandeln Erz in Platten um.
 - Crafting erzeugt neue Infrastrukturkomponenten aus Zwischenprodukten.
 
-== 3 Multithreading-Charakter
+= Multithreading-Charakter
 
-=== 3.1 Thread-Landschaft
+== Thread-Landschaft
 
 Die Anwendung nutzt mindestens die folgenden Thread-Kategorien:
 
@@ -76,14 +68,14 @@ Die Anwendung nutzt mindestens die folgenden Thread-Kategorien:
 
 Damit ist die Forderung nach mindestens drei Threads deutlich ueberschritten.
 
-=== 3.2 Gemeinsam genutzte Ressourcen
+== Gemeinsam genutzte Ressourcen
 
 - Weltzustand (`WorldMap`, `Tile`-Objekte)
 - Maschinenlisten, Beltlisten, Roboterlisten
 - Maschineninterne Puffer (`inputBuffer`, `outputBuffer`)
 - Inventarzustand der Spielfigur
 
-=== 3.3 Synchronisationsmechanismen
+== Synchronisationsmechanismen
 
 1. Pro Tile existiert ein `ReentrantLock` fuer feingranulare Synchronisation.
 2. Mehrtile-Operationen nutzen konsistente Lock-Reihenfolgen (Deadlock-Praevention).
@@ -91,7 +83,7 @@ Damit ist die Forderung nach mindestens drei Threads deutlich ueberschritten.
 4. Lebenszyklus-Flags verwenden `AtomicBoolean` fuer nebenlaeufige Sichtbarkeit.
 5. Positionswerte von Robotern und Spielerzustand sind fuer Sichtbarkeit auf volatile/atomaren Datentypen aufgesetzt.
 
-== 4 Anforderungen (Requirements)
+= Anforderungen (Requirements)
 
 Die folgenden Anforderungen sind konsistent, verifizierbar und umsetzbar formuliert.
 
@@ -113,9 +105,9 @@ Die folgenden Anforderungen sind konsistent, verifizierbar und umsetzbar formuli
   [F-10], [Unter Windows soll ein EXE-Paket ueber `jpackage` erzeugbar sein.], [Nicht-funktional], [Packaging-Skript]
 )
 
-== 5 Architektur und Design Patterns
+= Architektur und Design Patterns
 
-=== 5.1 Schichten und Module
+== Schichten und Module
 
 - `world`: Spielfeldmodell und Tile-Synchronisation
 - `entity`: Spieler- und Itemmodell
@@ -124,15 +116,15 @@ Die folgenden Anforderungen sind konsistent, verifizierbar und umsetzbar formuli
 - `core`: Supervisor und Kollisionskontrolle
 - `ui`: Rendering und Eingabeverarbeitung
 
-=== 5.2 Verwendete Muster
+== Verwendete Muster
 
 1. *Strategy Pattern*: Produktionsvarianten (`MiningStrategy`, `SmeltingStrategy`, `GrabberStrategy`) entkoppeln Maschinenklasse und Prozesslogik.
 2. *Supervisor Pattern*: `GameSupervisor` steuert Start/Stopp und Lebenszyklus aller Hintergrundaktivitaeten.
 3. *Producer-Consumer-Mechanik*: Maschinen erzeugen Output, Logistikkomponenten transportieren und konsumieren diesen asynchron.
 
-== 6 Verlaesslichkeit
+= Verlaesslichkeit
 
-=== 6.1 Frage 1: Folgen eines Systemausfalls
+== Frage 1: Folgen eines Systemausfalls
 
 Ein Ausfall hat primaer Folgen auf Spielverlauf und Nutzungsqualitaet:
 
@@ -142,7 +134,7 @@ Ein Ausfall hat primaer Folgen auf Spielverlauf und Nutzungsqualitaet:
 
 Kritikalitaet: *niedrig bis mittel*. Es handelt sich nicht um ein sicherheitskritisches System, jedoch ist die Verfuegbarkeit fuer Spielspass und Bewertung relevant.
 
-=== 6.2 Frage 2: Mechanismen zur Erhoehung der Verlaesslichkeit
+== Frage 2: Mechanismen zur Erhoehung der Verlaesslichkeit
 
 1. Granulare Locks pro Tile zur Begrenzung kritischer Bereiche.
 2. Definierte Lock-Reihenfolge bei Mehrtilezugriffen zur Deadlock-Vermeidung.
@@ -150,7 +142,7 @@ Kritikalitaet: *niedrig bis mittel*. Es handelt sich nicht um ein sicherheitskri
 4. Explizite Fehlerabfangung in periodischen Maschinentasks, damit Einzeldefekte nicht den gesamten Scheduler abbrechen.
 5. Testpyramide (Unit/Integration/End-to-End-Smoketests) fuer regressionsarme Weiterentwicklung.
 
-=== 6.3 Frage 3: Metriken fuer Zuverlaessigkeit und Verfuegbarkeit
+== Frage 3: Metriken fuer Zuverlaessigkeit und Verfuegbarkeit
 
 Geeignete Metriken:
 
@@ -172,7 +164,7 @@ Aktueller Nachweisstand im Projekt:
 2. Die Ergebnisse werden bei der Testausfuehrung in der Konsole ausgegeben und fuer die Abgabe dokumentiert.
 3. Die Zielwerte werden bis zur Endabgabe ueber wiederholte Testlaeufe auf dem Zielsystem validiert.
 
-=== 6.4 Frage 4: Qualitativer Testdatensatz
+== Frage 4: Qualitativer Testdatensatz
 
 Zur Nachweisfuehrung wird ein strukturierter Datensatz aus automatisierten und manuellen Runs vorgeschlagen:
 
@@ -184,27 +176,27 @@ Zur Nachweisfuehrung wird ein strukturierter Datensatz aus automatisierten und m
 
 Die Uebertragbarkeit externer Vergleichswerte wird darueber begruendet, dass auch hier eine interaktive Anwendung mit Benutzerfokus betrachtet wird, bei der wahrgenommene Ausfaelle primaer ueber Sessionabbrueche sichtbar werden.
 
-== 7 Testkonzept und Nachweisstruktur
+= Testkonzept und Nachweisstruktur
 
-=== 7.1 Unit-Tests
+== Unit-Tests
 
 - `WorldMapTest`: Transferlogik inkl. Belegungsfaelle.
 - `CraftingManagerTest`: Rezeptvalidierung und Materialkonsum.
 
-=== 7.2 Integrationstests
+== Integrationstests
 
 - `ProductionPipelineIntegrationTest`: Miner-Greifer-Schmelzer-Pipeline bis zum nachweisbaren Output.
 - `MachineStressAndReliabilityTest` (`@Tag("load")`): Parallelisierte Lastszenarien mit mehreren Sessions.
 - `MachineStressAndReliabilityTest` (`@Tag("stress")`): Schnelle Register-/Deregister-Zyklen fuer Maschinen.
 - `MachineStressAndReliabilityTest` (`@Tag("reliability")`): Baseline-Metriken fuer SSR/MTBF.
 
-=== 7.3 End-to-End-Smoketest
+== End-to-End-Smoketest
 
 - `SupervisorLifecycleE2ETest`: Start/Stop des Gesamtsystems ohne Deadlock.
 
-== 8 Build, Standalone und EXE-Bereitstellung
+= Build, Standalone und EXE-Bereitstellung
 
-=== 8.1 Standalone JAR
+== Standalone JAR
 
 Die Anwendung ist als ausfuehrbares Maven-Artefakt konfiguriert. Start ueber:
 
@@ -213,7 +205,7 @@ mvn clean package
 java -jar target/swe2-game-<version-from-pom>.jar
 ```
 
-=== 8.2 Windows-EXE
+== Windows-EXE
 
 Mit JDK 17+ (inkl. `jpackage`) kann eine EXE erzeugt werden:
 
@@ -231,8 +223,8 @@ Zusatz fuer reproduzierbare Freigaben:
 
 Die finale Freigabe orientiert sich an der Checkliste in `DEPLOYMENT_CHECKLIST.md`.
 
-== 9 Fazit
+= Fazit
 
-Der aktuelle Projektstand erfuellt die Kernelemente der Aufgabenstellung: spielbare GUI, essentielle Nebenlaeufigkeit mit mehreren Threads, synchronisierte gemeinsame Ressourcen, strukturierte Anforderungen sowie ein belastbares Test- und Packaging-Fundament. Fuer die finale Abgabe empfiehlt sich die Ergaenzung empirischer Lasttestergebnisse fuer die in Kapitel 6 definierten Metriken.
+Der aktuelle Projektstand erfuellt die Kernelemente der Aufgabenstellung: spielbare GUI, essentielle Nebenläufigkeit mit mehreren Threads, synchronisierte gemeinsame Ressourcen, strukturierte Anforderungen sowie ein belastbares Test- und Packaging-Fundament. Fuer die finale Abgabe empfiehlt sich die Ergaenzung empirischer Lasttestergebnisse fuer die in Kapitel 6 definierten Metriken.
 
 #bibliography("references.bib")
