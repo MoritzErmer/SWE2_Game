@@ -58,15 +58,15 @@ Die Spielidee ist bewusst auf die Verbindung von Gameplay und Nebenläufigkeit a
 
 == Thread-Landschaft
 
-Die Anwendung nutzt mindestens die folgenden Thread-Kategorien:
+Die Anwendung nutzt die folgenden Thread-Kategorien:
 
 1. `EDT` (Swing Event Dispatch Thread): Rendering und UI-Ereignisse.
-2. `ScheduledExecutorService` (Maschinen-Pool): periodische `tick()`-Ausfuehrung je Maschine.
-3. `Logistics-Thread` (SingleThreadExecutor): globale Foerderbandlogik.
+2. `ScheduledExecutorService` (Maschinen-Pool): periodische `tick()`-Ausführung je Maschine.
+3. `Logistics-Thread` (SingleThreadExecutor): globale Förderbandlogik.
 4. `Robot-*` Threads (CachedThreadPool): autonome Transportroboter.
 5. `CollisionHandler` (dedizierter Thread): zyklische Kollisionserkennung.
 
-Damit ist die Forderung nach mindestens drei Threads deutlich ueberschritten.
+Damit ist die Forderung nach mindestens drei Threads deutlich überschritten.
 
 == Gemeinsam genutzte Ressourcen
 
@@ -124,7 +124,7 @@ Die folgenden Anforderungen sind konsistent, verifizierbar und umsetzbar formuli
 
 = Verlaesslichkeit
 
-== Frage 1: Folgen eines Systemausfalls
+== Folgen eines Systemausfalls
 
 Ein Ausfall hat primaer Folgen auf Spielverlauf und Nutzungsqualitaet:
 
@@ -132,9 +132,9 @@ Ein Ausfall hat primaer Folgen auf Spielverlauf und Nutzungsqualitaet:
 2. Abbruch der laufenden Session und potentielle Frustration.
 3. Im Fehlerfall moegliche Inkonsistenzen (z.B. doppelte oder verlorene Items) bei unvollstaendigen Mehrschritttransaktionen.
 
-Kritikalitaet: *niedrig bis mittel*. Es handelt sich nicht um ein sicherheitskritisches System, jedoch ist die Verfuegbarkeit fuer Spielspass und Bewertung relevant.
+Kritikalitaet: *niedrig bis mittel*. Es handelt sich nicht um ein sicherheitskritisches System, jedoch ist die Verfuegbarkeit fuer Spielspass relevant.
 
-== Frage 2: Mechanismen zur Erhoehung der Verlaesslichkeit
+== Mechanismen zur Erhoehung der Verlaesslichkeit
 
 1. Granulare Locks pro Tile zur Begrenzung kritischer Bereiche.
 2. Definierte Lock-Reihenfolge bei Mehrtilezugriffen zur Deadlock-Vermeidung.
@@ -142,7 +142,7 @@ Kritikalitaet: *niedrig bis mittel*. Es handelt sich nicht um ein sicherheitskri
 4. Explizite Fehlerabfangung in periodischen Maschinentasks, damit Einzeldefekte nicht den gesamten Scheduler abbrechen.
 5. Testpyramide (Unit/Integration/End-to-End-Smoketests) fuer regressionsarme Weiterentwicklung.
 
-== Frage 3: Metriken fuer Zuverlaessigkeit und Verfuegbarkeit
+== Metriken fuer Zuverlaessigkeit und Verfuegbarkeit
 
 Geeignete Metriken:
 
@@ -164,7 +164,7 @@ Aktueller Nachweisstand im Projekt:
 2. Die Ergebnisse werden bei der Testausfuehrung in der Konsole ausgegeben und fuer die Abgabe dokumentiert.
 3. Die Zielwerte werden bis zur Endabgabe ueber wiederholte Testlaeufe auf dem Zielsystem validiert.
 
-== Frage 4: Qualitativer Testdatensatz
+== Qualitativer Testdatensatz
 
 Zur Nachweisfuehrung wird ein strukturierter Datensatz aus automatisierten und manuellen Runs vorgeschlagen:
 
