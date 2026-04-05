@@ -30,6 +30,7 @@ public class GameSaveState {
         public String machineType;
         public int x, y;
         public String direction;
+        public String baseTileType;
         public ItemStackData inputBuffer;
         public ItemStackData outputBuffer;
     }
