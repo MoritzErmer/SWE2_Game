@@ -47,7 +47,6 @@ Bei jeder funktionalen Aenderung sind diese Updates verpflichtend:
 2. Testanpassung in [src/test/java/game](src/test/java/game).
 3. Dokuanpassung in [docs/typst/main.typ](docs/typst/main.typ).
 4. Traceability-Update in [REQUIREMENTS_TRACEABILITY.md](REQUIREMENTS_TRACEABILITY.md).
-5. Konsistenzcheck ueber [scripts/check-doc-consistency.ps1](scripts/check-doc-consistency.ps1).
 
 ## E. Definition of Done (DoD)
 
@@ -56,4 +55,4 @@ Eine Aenderung gilt nur dann als abgeschlossen, wenn:
 1. Build/Test erfolgreich sind.
 2. Doku die geaenderte Funktion und den Requirementbezug enthaelt.
 3. Die Matrix den Nachweislink auf Code plus Test plus Doku enthaelt.
-4. Der Konsistenzcheck ohne Fehler durchlaeuft.
+4. Die Version-/Artefakt-Pruefung ohne Fehler durchlaeuft.
