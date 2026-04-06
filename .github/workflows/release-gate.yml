@@ -54,11 +54,20 @@ jobs:
         shell: pwsh
         run: ./scripts/package-exe.ps1 -AppVersion "$env:APP_VERSION"
 
+      - name: Copy JAR to dist
+        shell: pwsh
+        run: |
+          $jar = Get-ChildItem "target/swe2-game-*.jar" | Select-Object -First 1
+          if (-not $jar) { throw "JAR not found in target/." }
+          Copy-Item $jar.FullName "dist/FactoryGame_$env:APP_VERSION.jar"
+
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v4
         with:
           name: factory-game-dist
-          path: dist/FactoryGame_*.exe
+          path: |
+            dist/FactoryGame_*.exe
+            dist/FactoryGame_*.jar
 
       - name: Publish GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -71,4 +80,6 @@ jobs:
 
             **Keine Java-Installation nötig.** Installer ausführen, fertig.
           make_latest: true
-          files: dist/FactoryGame_*.exe
+          files: |
+            dist/FactoryGame_*.exe
+            dist/FactoryGame_*.jar
