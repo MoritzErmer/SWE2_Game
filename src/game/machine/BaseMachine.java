@@ -175,6 +175,16 @@ public abstract class BaseMachine {
       return inputBuffer != null && inputBuffer.getAmount() > 0;
    }
 
+   /**
+    * Gibt an, wie viele Pollution-Punkte diese Maschine pro Tick erzeugt.
+    * Subklassen überschreiben diese Methode, um Pollution zu erzeugen.
+    *
+    * @return Pollution-Punkte pro Tick (Standard: 0)
+    */
+   public int getPollutionPerTick() {
+      return 1;
+   }
+
    @Override
    public String toString() {
       return name + " @ Tile(" + System.identityHashCode(tile) + ")";

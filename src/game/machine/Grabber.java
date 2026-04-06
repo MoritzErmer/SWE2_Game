@@ -208,8 +208,8 @@ public class Grabber extends BaseMachine {
     * Legt ein Item zurück zur Quelle wenn Ziel voll war.
     *
     * Das Zurücklegen darf niemals stillschweigend fehlschlagen, da sonst Items
-      * verloren gehen können. Wenn weder Maschinen-Output noch Foerderbandablage
-      * moeglich
+    * verloren gehen können. Wenn weder Maschinen-Output noch Foerderbandablage
+    * moeglich
     * ist, wird deshalb explizit ein Fehler ausgelöst.
     */
    private void returnToSource(Tile srcTile, ItemStack item) {

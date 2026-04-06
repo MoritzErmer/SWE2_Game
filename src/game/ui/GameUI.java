@@ -2,6 +2,7 @@ package game.ui;
 
 import game.GameMode;
 import game.core.GameSupervisor;
+import game.core.PollutionManager;
 import game.crafting.CraftingManager;
 import game.crafting.CraftingRecipe;
 import game.entity.ItemStack;
@@ -70,6 +71,10 @@ public class GameUI extends JFrame {
    // HUD notification message (save/load feedback)
    private String hudMessage = null;
    private long hudMessageTime = 0;
+
+   // Pollution
+   private PollutionManager pollutionManager;
+   private boolean showGameOverScreen = false;
 
    // Pixel-Art Texturen (8x8 → skaliert auf TILE_SIZE)
    private final PixelTextures textures;
@@ -345,10 +350,11 @@ public class GameUI extends JFrame {
    private int cameraY = 0;
 
    /**
-    * Sets the supervisor and lists needed for save/load. Call before the game starts.
+    * Sets the supervisor and lists needed for save/load. Call before the game
+    * starts.
     */
    public void setSaveContext(GameSupervisor supervisor, List<BaseMachine> machines,
-                               List<ConveyorBelt> belts) {
+         List<ConveyorBelt> belts) {
       this.supervisor = supervisor;
       this.machineList = machines;
       this.beltList = belts;
@@ -369,6 +375,10 @@ public class GameUI extends JFrame {
       if (gameAlreadyEnded) {
          this.finalElapsedPlayTimeMs = this.elapsedPlayTimeBeforeSessionMs;
       }
+   }
+
+   public void setPollutionManager(PollutionManager pollutionManager) {
+      this.pollutionManager = pollutionManager;
    }
 
    private long getElapsedPlayTimeMs() {
@@ -464,12 +474,22 @@ public class GameUI extends JFrame {
                return;
             }
 
+            // Game-Over-Screen: nur ESC reagiert
+            if (showGameOverScreen) {
+               if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                  dispose();
+                  System.exit(0);
+               }
+               return;
+            }
+
             // --- Ctrl+S: Speichern ---
             if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_S) {
                saveGame();
                return;
             }
-            // --- Ctrl+L: Laden (nur Hinweis, vollständige Wiederherstellung erfordert Neustart) ---
+            // --- Ctrl+L: Laden (nur Hinweis, vollständige Wiederherstellung erfordert
+            // Neustart) ---
             if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_L) {
                loadGame();
                return;
@@ -579,6 +599,13 @@ public class GameUI extends JFrame {
          updateCamera();
          checkMiningComplete();
          updateRocketObjectiveState();
+         // Game-Over-Prüfung: Spieler tot durch Pollution-Schaden
+         if (!showGameOverScreen && !showEndScreen && !player.isAlive()) {
+            showGameOverScreen = true;
+            if (finalElapsedPlayTimeMs < 0L) {
+               finalElapsedPlayTimeMs = getElapsedPlayTimeMs();
+            }
+         }
          gamePanel.repaint();
       });
       timer.start();
@@ -743,7 +770,7 @@ public class GameUI extends JFrame {
                || type == ItemType.SMELTER_KIT
                || type == ItemType.GRABBER_KIT
                || type == ItemType.FORGE_KIT;
-            if (placingMachine && !canPlaceMachineOnTile(tile))
+         if (placingMachine && !canPlaceMachineOnTile(tile))
             return;
 
          // Miner platzieren (nur auf Ressourcen-Tile)
@@ -850,7 +877,7 @@ public class GameUI extends JFrame {
    /**
     * Rechtsklick auf ein Tile:
     * - Foerderband: Boden-Item ins Inventar nehmen
-      * - Miner: Kohle aus Inventar als Brennstoff einfuellen
+    * - Miner: Kohle aus Inventar als Brennstoff einfuellen
     * - Greifer: Kohle aus Inventar als Brennstoff einfüllen
     * - Smelter: Erz aus Inventar in Input-Buffer legen
     * - Jede Maschine: Output-Buffer ins Inventar nehmen
@@ -1003,10 +1030,15 @@ public class GameUI extends JFrame {
          drawHotbar(g2);
          drawHUD(g2);
 
-               if (showEndScreen) {
-                  drawEndScreen(g2);
-                  return;
-               }
+         if (showGameOverScreen) {
+            drawGameOverScreen(g2);
+            return;
+         }
+
+         if (showEndScreen) {
+            drawEndScreen(g2);
+            return;
+         }
 
          if (inventoryOpen) {
             drawInventoryOverlay(g2);
@@ -1222,25 +1254,58 @@ public class GameUI extends JFrame {
          Tile current = map.getTile(player.getX(), player.getY());
          g2.drawString(current.getType().name(), 76 + modeOffset, hudY + 14);
 
-            String timeText = "Zeit " + formatDuration(getElapsedPlayTimeMs());
-            FontMetrics timeMetrics = g2.getFontMetrics();
-            g2.setColor(new Color(240, 220, 150));
-            g2.drawString(timeText, getWidth() - timeMetrics.stringWidth(timeText) - 10, hudY + 14);
+         String timeText = "Zeit " + formatDuration(getElapsedPlayTimeMs());
+         FontMetrics timeMetrics = g2.getFontMetrics();
+         g2.setColor(new Color(240, 220, 150));
+         g2.drawString(timeText, getWidth() - timeMetrics.stringWidth(timeText) - 10, hudY + 14);
 
-            if (rocketObjective != null) {
+         if (rocketObjective != null) {
             g2.setColor(new Color(180, 220, 255));
             String objectiveText = "Rakete G " + rocketObjective.getDeliveredIronGears() + "/"
-               + RocketObjective.REQUIRED_IRON_GEARS
-               + "  C " + rocketObjective.getDeliveredCopperPlates() + "/"
-               + RocketObjective.REQUIRED_COPPER_PLATES
-               + "  B " + rocketObjective.getDeliveredConveyorBelts() + "/"
-               + RocketObjective.REQUIRED_CONVEYOR_BELTS;
+                  + RocketObjective.REQUIRED_IRON_GEARS
+                  + "  C " + rocketObjective.getDeliveredCopperPlates() + "/"
+                  + RocketObjective.REQUIRED_COPPER_PLATES
+                  + "  B " + rocketObjective.getDeliveredConveyorBelts() + "/"
+                  + RocketObjective.REQUIRED_CONVEYOR_BELTS;
             g2.drawString(objectiveText, 6, hudY - 8);
+         }
+
+         // Pollution bar (above rocket info)
+         if (pollutionManager != null) {
+            int pollution = pollutionManager.getPollutionLevel();
+            int barX = 82;
+            int barW = 100;
+            int barH = 9;
+            int barY = hudY - 42;
+            // Background
+            g2.setColor(new Color(50, 50, 50));
+            g2.fillRect(barX, barY, barW, barH);
+            // Fill: green → yellow → red based on level
+            float ratio = pollution / 100.0f;
+            Color barColor;
+            if (ratio < 0.5f) {
+               int r = (int) (ratio * 2 * 255);
+               barColor = new Color(r, 200, 30);
+            } else {
+               int gc = (int) ((1f - ratio) * 2 * 200);
+               barColor = new Color(220, gc, 20);
             }
+            g2.setColor(barColor);
+            g2.fillRect(barX, barY, (int) (barW * ratio), barH);
+            // Border
+            g2.setColor(new Color(150, 150, 150));
+            g2.drawRect(barX, barY, barW, barH);
+            // Label + value
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Monospaced", Font.PLAIN, 11));
+            g2.drawString("Pollution:", 6, hudY - 34);
+            g2.drawString(pollution + "%", barX + barW + 4, hudY - 34);
+         }
 
          // Controls hint
          g2.setColor(new Color(150, 150, 150));
-            g2.drawString("[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar [R]Rotate [Q]Deconstruct [Left]Place [Right]Interact/Feed",
+         g2.drawString(
+               "[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar [R]Rotate [Q]Deconstruct [Left]Place [Right]Interact/Feed",
                176 + modeOffset, hudY + 14);
 
          // HUD notification (save/load feedback, fades after 3 seconds)
@@ -1487,6 +1552,52 @@ public class GameUI extends JFrame {
          float progress = Math.max(0.0f,
                Math.min(1.0f, (float) elapsedSinceLaunch / (float) ROCKET_LAUNCH_DURATION_MS));
          return (int) (ROCKET_ASCENT_PIXELS * progress);
+      }
+
+      private void drawGameOverScreen(Graphics2D g2) {
+         g2.setColor(new Color(0, 0, 0, 210));
+         g2.fillRect(0, 0, getWidth(), getHeight());
+
+         int panelW = 560;
+         int panelH = 260;
+         int px = (getWidth() - panelW) / 2;
+         int py = (getHeight() - panelH) / 2;
+
+         g2.setColor(new Color(46, 14, 14, 245));
+         g2.fillRoundRect(px, py, panelW, panelH, 18, 18);
+         g2.setColor(new Color(200, 80, 60));
+         g2.setStroke(new BasicStroke(2f));
+         g2.drawRoundRect(px, py, panelW, panelH, 18, 18);
+         g2.setStroke(new BasicStroke(1f));
+
+         g2.setColor(new Color(255, 100, 80));
+         g2.setFont(new Font("SansSerif", Font.BOLD, 32));
+         String title = "Zu viel Luftverschmutzung!";
+         FontMetrics titleFm = g2.getFontMetrics();
+         g2.drawString(title, px + (panelW - titleFm.stringWidth(title)) / 2, py + 70);
+
+         g2.setFont(new Font("SansSerif", Font.PLAIN, 16));
+         g2.setColor(new Color(230, 190, 180));
+         String subtitle = "Der Spieler ist an der Pollution gestorben.";
+         FontMetrics subFm = g2.getFontMetrics();
+         g2.drawString(subtitle, px + (panelW - subFm.stringWidth(subtitle)) / 2, py + 100);
+
+         long endTime = finalElapsedPlayTimeMs >= 0L ? finalElapsedPlayTimeMs : getElapsedPlayTimeMs();
+         g2.setFont(new Font("Monospaced", Font.BOLD, 30));
+         g2.setColor(new Color(255, 180, 80));
+         String timeStr = formatDuration(endTime);
+         FontMetrics timeFm = g2.getFontMetrics();
+         g2.drawString(timeStr, px + (panelW - timeFm.stringWidth(timeStr)) / 2, py + 150);
+
+         g2.setFont(new Font("SansSerif", Font.PLAIN, 16));
+         g2.setColor(new Color(210, 180, 170));
+         g2.drawString("Überlebenszeit", px + (panelW - 100) / 2, py + 122);
+
+         g2.setFont(new Font("SansSerif", Font.PLAIN, 15));
+         g2.setColor(new Color(180, 160, 155));
+         String hint = "Drücke ESC zum Beenden";
+         FontMetrics hintFm = g2.getFontMetrics();
+         g2.drawString(hint, px + (panelW - hintFm.stringWidth(hint)) / 2, py + 210);
       }
 
       private void drawEndScreen(Graphics2D g2) {
