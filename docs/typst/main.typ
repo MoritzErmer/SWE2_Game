@@ -247,9 +247,8 @@ Das Skript erzeugt ein installierbares Paket im Verzeichnis `dist`.
 
 Zusatz fuer reproduzierbare Freigaben:
 
-1. `./scripts/check-doc-consistency.ps1`
-2. `./scripts/check-version-artifacts.ps1`
-3. `./scripts/release-gate.ps1`
+1. `./scripts/check-version-artifacts.ps1`
+2. `./scripts/release-gate.ps1`
 
 Die finale Freigabe orientiert sich an der Checkliste in `DEPLOYMENT_CHECKLIST.md`.
 

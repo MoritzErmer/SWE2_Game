@@ -54,7 +54,14 @@ public class GameSupervisor {
       }
    }
 
-   public void start() {
+   public synchronized void start() {
+      if (running.get()) {
+         return;
+      }
+
+      ensureExecutorsRunning();
+
+      machineFutures.clear();
       running.set(true);
 
       // Starte Maschinen (Producer) als periodische Tasks
@@ -85,6 +92,7 @@ public class GameSupervisor {
          machines.add(machine);
       }
       if (running.get()) {
+         ensureExecutorsRunning();
          ScheduledFuture<?> future = machineExecutor.scheduleAtFixedRate(() -> {
             try {
                machine.tick();
@@ -150,7 +158,7 @@ public class GameSupervisor {
    /**
     * Sicheres Herunterfahren aller Threads.
     */
-   public void stop() {
+   public synchronized void stop() {
       running.set(false);
       machineExecutor.shutdownNow();
       logisticsExecutor.shutdownNow();
@@ -162,6 +170,30 @@ public class GameSupervisor {
          Thread.currentThread().interrupt();
       }
       System.out.println("[GameSupervisor] Alle Threads gestoppt.");
+   }
+
+   private void initializeExecutors() {
+      this.machineExecutor = Executors.newScheduledThreadPool(
+            Runtime.getRuntime().availableProcessors());
+      this.logisticsExecutor = Executors.newSingleThreadExecutor(r -> {
+         Thread t = new Thread(r, "Logistics-Thread");
+         t.setDaemon(true);
+         return t;
+      });
+      this.robotExecutor = Executors.newCachedThreadPool(r -> {
+         Thread t = new Thread(r, "Robot-" + System.nanoTime());
+         t.setDaemon(true);
+         return t;
+      });
+      this.collisionHandler = new CollisionHandler(this.robots);
+   }
+
+   private void ensureExecutorsRunning() {
+      if (machineExecutor == null || machineExecutor.isShutdown() || machineExecutor.isTerminated()
+            || logisticsExecutor == null || logisticsExecutor.isShutdown() || logisticsExecutor.isTerminated()
+            || robotExecutor == null || robotExecutor.isShutdown() || robotExecutor.isTerminated()) {
+         initializeExecutors();
+      }
    }
 
    public AtomicBoolean getRunning() {

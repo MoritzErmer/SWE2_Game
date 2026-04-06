@@ -195,10 +195,16 @@ public class GameUI extends JFrame {
          showHudMessage("Speichern nicht verfuegbar");
          return;
       }
+
       // Run off EDT so we don't block the UI thread during file I/O
       new Thread(() -> {
-         SaveManager.save(supervisor, map, player, machineList, beltList, gameMode);
-         SwingUtilities.invokeLater(() -> showHudMessage("Gespeichert!"));
+         try {
+            SaveManager.save(supervisor, map, player, machineList, beltList, gameMode);
+            SwingUtilities.invokeLater(() -> showHudMessage("Gespeichert!"));
+         } catch (RuntimeException e) {
+            SwingUtilities.invokeLater(() -> showHudMessage("Speichern fehlgeschlagen"));
+            e.printStackTrace();
+         }
       }, "save-thread").start();
    }
 
@@ -911,7 +917,7 @@ public class GameUI extends JFrame {
                g2.setColor(new Color(100, 255, 120, alpha));
                FontMetrics fm = g2.getFontMetrics();
                int msgX = (getWidth() - fm.stringWidth(hudMessage)) / 2;
-               g2.drawString(hudMessage, msgX, hudY - 8);
+               g2.drawString(hudMessage, msgX, hudY - 60);
             } else {
                hudMessage = null;
             }
