@@ -11,7 +11,7 @@ import game.world.WorldMap;
  *
  * Der Greifer hat eine Richtung (source → destination) und arbeitet wie folgt:
  * - Nimmt Items vom Output-Buffer einer Maschine auf dem Quell-Tile
- * ODER von einem Foerderband-Item am Quell-Tile
+ * ODER von einem Förderband-Quell-Tile
  * - Legt sie in den Input-Buffer einer Maschine auf dem Ziel-Tile
  * ODER auf ein Foerderband-Zieltile
  * - Verbraucht Kohle aus seinem eigenen Input-Buffer als Brennstoff
@@ -162,7 +162,7 @@ public class Grabber extends BaseMachine {
          }
       }
 
-      // Prioritaet 2: Item vom Foerderband
+      // Prioritaet 2: Item vom Förderband
       if (srcTile.isConveyorBelt() && srcTile.hasItem()) {
          ItemStack ground = srcTile.getItemOnGround();
          ItemType type = ground.getType();
@@ -186,7 +186,7 @@ public class Grabber extends BaseMachine {
          return tryInsertInputFromSideCompat(dstTile.getMachine(), item, incomingSide);
       }
 
-      // Prioritaet 2: Auf Foerderband legen
+      // Prioritaet 2: Auf Förderband legen
       if (!dstTile.isConveyorBelt()) {
          return false;
       }
