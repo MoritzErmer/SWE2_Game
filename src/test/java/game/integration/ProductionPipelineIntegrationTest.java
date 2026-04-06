@@ -122,9 +122,8 @@ class ProductionPipelineIntegrationTest {
         machines.add(grabber3);
 
         List<ConveyorBelt> belts = new CopyOnWriteArrayList<>();
-        List<TransportRobot> robots = new CopyOnWriteArrayList<>();
 
-        GameSupervisor supervisor = new GameSupervisor(map, machines, belts, robots);
+        GameSupervisor supervisor = new GameSupervisor(map, machines, belts);
         supervisor.start();
 
         try {

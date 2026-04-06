@@ -44,6 +44,7 @@ public class Forge extends BaseMachine {
    }
 
    // Side-aware insertion hook (kept without @Override for compatibility).
+   @Override
    public boolean tryInsertInputFromSide(ItemStack item, Direction incomingSide) {
       if (item == null || incomingSide == null)
          return false;

@@ -65,7 +65,7 @@ public class Main {
       player.addItem(ItemType.FORGE_KIT, 10);
       player.addItem(ItemType.CONVEYOR_BELT_ITEM, 50);
 
-      // --- Maschinen, Belts, Roboter (initial leer, werden im Spiel platziert) ---
+      // --- Maschinen, Belts (initial leer, werden im Spiel platziert) ---
       List<BaseMachine> machines = new CopyOnWriteArrayList<>();
       List<ConveyorBelt> belts = new CopyOnWriteArrayList<>();
 

@@ -65,7 +65,7 @@ public class CraftingManager {
             .result(ItemType.COPPER_PLATE, 4)
             .build());
 
-      // Eisenzahnrad: 2 Eisenplatten → 1 Zahnrad
+      // Eisenzahnrad: 8 Eisenplatten → 1 Zahnrad
       recipes.add(CraftingRecipe.builder("Iron Gear")
             .ingredient(ItemType.IRON_PLATE, 8)
             .result(ItemType.IRON_GEAR, 1)

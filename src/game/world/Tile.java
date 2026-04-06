@@ -64,27 +64,6 @@ public class Tile {
    }
 
    /**
-    * Prüft ob ein Boden-Item auf diesem Tile erlaubt ist.
-    */
-   public boolean canAcceptGroundItem() {
-      return machine == null && itemOnGround == null;
-   }
-
-   /**
-    * Prüft ob auf diesem Tile eine Maschine platziert werden darf.
-    */
-   public boolean canPlaceMachine() {
-      return machine == null && itemOnGround == null;
-   }
-
-   /**
-    * Gibt true zurück wenn das Tile ein Förderband ist.
-    */
-   public boolean isConveyorBelt() {
-      return type == TileType.CONVEYOR_BELT;
-   }
-
-   /**
     * Legt ein Item auf das Tile. Thread-sicher nur innerhalb eines lock()-Blocks
     * aufrufen!
     */

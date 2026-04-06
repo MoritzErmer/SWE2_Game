@@ -158,19 +158,6 @@ public class GameSupervisor {
       System.out.println("[GameSupervisor] Belt rotiert bei (" + x + "," + y + ") -> " + belt.getDirection());
    }
 
-   public void registerRobot(TransportRobot robot) {
-      if (!robots.contains(robot)) {
-         robots.add(robot);
-      }
-      if (running.get()) {
-         robotExecutor.submit(robot);
-      }
-   }
-
-   public void deregisterRobot(TransportRobot robot) {
-      robots.remove(robot);
-   }
-
    /**
     * Sicheres Herunterfahren aller Threads.
     */
