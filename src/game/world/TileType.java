@@ -12,7 +12,8 @@ public enum TileType {
    COPPER_DEPOSIT,
    COAL_DEPOSIT,
    MACHINE,
-   CONVEYOR_BELT;
+   CONVEYOR_BELT,
+   ROCKET_PAD;
 
    /**
     * Gibt den ItemType zurück, den dieses Vorkommen beim Abbauen liefert.

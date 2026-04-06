@@ -12,6 +12,8 @@ import game.machine.BaseMachine;
 import game.machine.Grabber;
 import game.machine.Miner;
 import game.machine.Smelter;
+import game.objective.RocketObjective;
+import game.save.GameSaveState;
 import game.save.SaveManager;
 import game.world.Tile;
 import game.world.TileType;
@@ -22,6 +24,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -39,10 +42,12 @@ public class GameUI extends JFrame {
    private static final int HOTBAR_HEIGHT = 48;
    private static final int HUD_HEIGHT = 20;
    private static final int TARGET_FPS = 30;
+   private static final int LAUNCH_DURATION_MS = 2600;
 
    private final WorldMap map;
    private final PlayerCharacter player;
    private final GamePanel gamePanel;
+   private final RocketObjective rocketObjective;
    private Consumer<BaseMachine> onMachinePlaced;
    private Consumer<BeltPlacement> onBeltPlaced;
 
@@ -71,6 +76,14 @@ public class GameUI extends JFrame {
 
    // Animation frame counter (incremented at TARGET_FPS)
    private int animFrame = 0;
+
+   // End-game and timing state
+   private boolean launchInProgress = false;
+   private boolean endscreenVisible = false;
+   private long launchStartTime = 0;
+   private long elapsedBeforeSessionMs = 0;
+   private long sessionStartTime = 0;
+   private long completionElapsedMs = -1;
 
    // Spieler-Blickrichtung (für Greifer-Platzierung und Vorschau)
    private int lastDx = 1; // Standard: nach rechts
@@ -197,7 +210,10 @@ public class GameUI extends JFrame {
       }
       // Run off EDT so we don't block the UI thread during file I/O
       new Thread(() -> {
-         SaveManager.save(supervisor, map, player, machineList, beltList, gameMode);
+         SaveManager.save(supervisor, map, player, machineList, beltList, gameMode,
+               rocketObjective.toSaveData(),
+               getElapsedTimeMs(),
+               endscreenVisible || launchInProgress || rocketObjective.isLaunched());
          SwingUtilities.invokeLater(() -> showHudMessage("Gespeichert!"));
       }, "save-thread").start();
    }
@@ -238,14 +254,36 @@ public class GameUI extends JFrame {
    }
 
    public GameUI(WorldMap map, PlayerCharacter player) {
-      this(map, player, GameMode.NORMAL);
+      this(map, player, GameMode.NORMAL, null, null);
    }
 
    public GameUI(WorldMap map, PlayerCharacter player, GameMode mode) {
+      this(map, player, mode, null, null);
+   }
+
+   public GameUI(WorldMap map, PlayerCharacter player, GameMode mode,
+                 RocketObjective rocketObjective, GameSaveState saveState) {
       this.map = map;
       this.player = player;
       this.gameMode = mode;
       this.craftingManager.setCreativeMode(mode == GameMode.CREATIVE);
+      this.rocketObjective = (rocketObjective != null)
+            ? rocketObjective
+            : RocketObjective.createRandom(map, new Random());
+
+      if (rocketObjective == null) {
+         this.rocketObjective.applyToMap(map);
+      }
+
+      if (saveState != null) {
+         this.elapsedBeforeSessionMs = Math.max(0L, saveState.elapsedTimeMs);
+      }
+      this.sessionStartTime = System.currentTimeMillis();
+
+      if ((saveState != null && saveState.gameCompleted) || this.rocketObjective.isLaunched()) {
+         this.completionElapsedMs = this.elapsedBeforeSessionMs;
+         this.endscreenVisible = true;
+      }
 
       this.textures = new PixelTextures(TILE_SIZE);
 
@@ -270,6 +308,14 @@ public class GameUI extends JFrame {
             // --- Ctrl+L: Laden (nur Hinweis, vollständige Wiederherstellung erfordert Neustart) ---
             if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_L) {
                loadGame();
+               return;
+            }
+
+            if (endscreenVisible || launchInProgress) {
+               if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                  dispose();
+                  System.exit(0);
+               }
                return;
             }
 
@@ -356,6 +402,9 @@ public class GameUI extends JFrame {
       gamePanel.addMouseListener(new MouseAdapter() {
          @Override
          public void mousePressed(MouseEvent e) {
+            if (launchInProgress || endscreenVisible) {
+               return;
+            }
             int tx = (e.getX() + cameraX) / TILE_SIZE;
             int ty = (e.getY() + cameraY) / TILE_SIZE;
             if (!map.inBounds(tx, ty))
@@ -373,6 +422,7 @@ public class GameUI extends JFrame {
          animFrame++;
          updateCamera();
          checkMiningComplete();
+         updateLaunchSequence();
          gamePanel.repaint();
       });
       timer.start();
@@ -505,6 +555,11 @@ public class GameUI extends JFrame {
       Tile tile = map.getTile(tx, ty);
       tile.getLock().lock();
       try {
+         if (tile.getType() == TileType.ROCKET_PAD) {
+            showHudMessage("Auf der Rakete kann nichts platziert werden.");
+            return;
+         }
+
          if (tile.hasMachine())
             return;
 
@@ -590,6 +645,11 @@ public class GameUI extends JFrame {
       Tile tile = map.getTile(tx, ty);
       tile.getLock().lock();
       try {
+         if (tile.getType() == TileType.ROCKET_PAD) {
+            feedRocketFromSelectedItem();
+            return;
+         }
+
          if (!tile.hasMachine()) {
             // Kein Maschine → Item vom Boden aufheben
             if (tile.hasItem()) {
@@ -638,6 +698,87 @@ public class GameUI extends JFrame {
       }
    }
 
+   private void feedRocketFromSelectedItem() {
+      ItemStack selected = player.getSelectedItem();
+      if (selected == null) {
+         showHudMessage("Waehle ein Item in der Hotbar fuer die Rakete.");
+         return;
+      }
+
+      ItemType type = selected.getType();
+      if (!RocketObjective.isRequired(type)) {
+         showHudMessage("Rakete braucht nur Iron Gear, Copper Plate und Conveyor Belt.");
+         return;
+      }
+
+      int accepted = rocketObjective.feed(type, selected.getAmount());
+      if (accepted <= 0) {
+         showHudMessage("Davon wird fuer die Rakete nichts mehr benoetigt.");
+         return;
+      }
+
+      player.consumeSelectedItem(accepted);
+      showHudMessage("Rakete gefuettert: +" + accepted + " " + type.getDisplayName());
+
+      if (rocketObjective.isFullyRepaired() && !launchInProgress && !endscreenVisible) {
+         startRocketLaunchSequence();
+      }
+   }
+
+   private void startRocketLaunchSequence() {
+      launchInProgress = true;
+      launchStartTime = System.currentTimeMillis();
+      completionElapsedMs = getElapsedTimeMs();
+      rocketObjective.markLaunched();
+      showHudMessage("Rakete repariert. Startsequenz laeuft...");
+   }
+
+   private void updateLaunchSequence() {
+      if (!launchInProgress) {
+         return;
+      }
+
+      long elapsed = System.currentTimeMillis() - launchStartTime;
+      if (elapsed >= LAUNCH_DURATION_MS) {
+         launchInProgress = false;
+         endscreenVisible = true;
+      }
+   }
+
+   private int getLaunchLiftOffset() {
+      if (!launchInProgress) {
+         return 0;
+      }
+
+      double t = Math.min(1.0, (System.currentTimeMillis() - launchStartTime) / (double) LAUNCH_DURATION_MS);
+      return (int) (Math.pow(t, 1.6) * TILE_SIZE * 9);
+   }
+
+   private long getElapsedTimeMs() {
+      if (completionElapsedMs >= 0) {
+         return completionElapsedMs;
+      }
+      return elapsedBeforeSessionMs + Math.max(0L, System.currentTimeMillis() - sessionStartTime);
+   }
+
+   private String formatDuration(long millis) {
+      long totalSeconds = millis / 1000;
+      long hours = totalSeconds / 3600;
+      long minutes = (totalSeconds % 3600) / 60;
+      long seconds = totalSeconds % 60;
+
+      if (hours > 0) {
+         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+      }
+      return String.format("%02d:%02d", minutes, seconds);
+   }
+
+   private String rocketProgressText() {
+      return "Rocket Gears " + rocketObjective.getDelivered(ItemType.IRON_GEAR) + "/" + rocketObjective.getRequired(ItemType.IRON_GEAR)
+            + "  Copper " + rocketObjective.getDelivered(ItemType.COPPER_PLATE) + "/" + rocketObjective.getRequired(ItemType.COPPER_PLATE)
+            + "  Belts " + rocketObjective.getDelivered(ItemType.CONVEYOR_BELT_ITEM) + "/" + rocketObjective.getRequired(ItemType.CONVEYOR_BELT_ITEM);
+   }
+
    // ==================== MACHINE PLACEMENT ====================
 
    /**
@@ -648,6 +789,8 @@ public class GameUI extends JFrame {
       Tile tile = map.getTile(player.getX(), player.getY());
       tile.getLock().lock();
       try {
+         if (tile.getType() == TileType.ROCKET_PAD)
+            return;
          if (tile.hasMachine())
             return;
          BaseMachine machine;
@@ -685,16 +828,20 @@ public class GameUI extends JFrame {
          g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
          drawGrid(g2);
+         drawRocket(g2);
          drawPlayer(g2);
          drawMiningBar(g2);
          drawHotbar(g2);
          drawHUD(g2);
 
-         if (inventoryOpen) {
+         if (inventoryOpen && !launchInProgress && !endscreenVisible) {
             drawInventoryOverlay(g2);
          }
-         if (craftingOpen) {
+         if (craftingOpen && !launchInProgress && !endscreenVisible) {
             drawCraftingOverlay(g2);
+         }
+         if (endscreenVisible) {
+            drawEndscreenOverlay(g2);
          }
       }
 
@@ -781,6 +928,26 @@ public class GameUI extends JFrame {
       }
 
       // --- Player (Pixel-Art Textur) mit Kamera-Offset ---
+      private void drawRocket(Graphics2D g2) {
+         int frame = launchInProgress ? Math.floorMod(animFrame / 4, 4) : 0;
+         int liftOffset = getLaunchLiftOffset();
+
+         for (int rx = 0; rx < RocketObjective.WIDTH; rx++) {
+            for (int ry = 0; ry < RocketObjective.HEIGHT; ry++) {
+               int px = (rocketObjective.getX() + rx) * TILE_SIZE - cameraX;
+               int py = (rocketObjective.getY() + ry) * TILE_SIZE - cameraY - liftOffset;
+
+               BufferedImage tileTex = textures.get("rocket_f" + frame + "_" + rx + "_" + ry);
+               if (tileTex == null) {
+                  tileTex = textures.get("rocket_f0_" + rx + "_" + ry);
+               }
+               if (tileTex != null) {
+                  g2.drawImage(tileTex, px, py, null);
+               }
+            }
+         }
+      }
+
       private void drawPlayer(Graphics2D g2) {
          int px = player.getX() * TILE_SIZE - cameraX;
          int py = player.getY() * TILE_SIZE - cameraY;
@@ -899,8 +1066,18 @@ public class GameUI extends JFrame {
 
          // Controls hint
          g2.setColor(new Color(150, 150, 150));
-         g2.drawString("[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar",
+         g2.drawString("[WASD]Move [E]Inv [C]Craft [RMB Rocket]Feed [Ctrl+S]Save [Enter]Mine",
                176 + modeOffset, hudY + 14);
+
+         // Rocket progress
+         g2.setColor(new Color(180, 210, 255));
+         g2.setFont(new Font("Monospaced", Font.BOLD, 11));
+         g2.drawString(rocketProgressText(), 8, 16);
+
+         if (launchInProgress) {
+            g2.setColor(new Color(255, 220, 120));
+            g2.drawString("Startsequenz laeuft...", getWidth() - 220, 16);
+         }
 
          // HUD notification (save/load feedback, fades after 3 seconds)
          if (hudMessage != null) {
@@ -916,6 +1093,52 @@ public class GameUI extends JFrame {
                hudMessage = null;
             }
          }
+      }
+
+      private void drawEndscreenOverlay(Graphics2D g2) {
+         g2.setColor(new Color(8, 12, 24, 210));
+         g2.fillRect(0, 0, getWidth(), getHeight());
+
+         int panelW = 540;
+         int panelH = 280;
+         int px = (getWidth() - panelW) / 2;
+         int py = (getHeight() - panelH) / 2;
+
+         g2.setColor(new Color(24, 34, 56, 240));
+         g2.fillRoundRect(px, py, panelW, panelH, 18, 18);
+         g2.setColor(new Color(180, 210, 255));
+         g2.setStroke(new BasicStroke(2f));
+         g2.drawRoundRect(px, py, panelW, panelH, 18, 18);
+
+         g2.setFont(new Font("Monospaced", Font.BOLD, 30));
+         g2.setColor(new Color(240, 245, 255));
+         String title = "MISSION ERFUELLT";
+         FontMetrics fmTitle = g2.getFontMetrics();
+         g2.drawString(title, px + (panelW - fmTitle.stringWidth(title)) / 2, py + 58);
+
+         g2.setFont(new Font("SansSerif", Font.PLAIN, 18));
+         g2.setColor(new Color(210, 220, 240));
+         String subtitle = "Die Rakete wurde vollstaendig repariert und ist gestartet.";
+         FontMetrics fmSub = g2.getFontMetrics();
+         g2.drawString(subtitle, px + (panelW - fmSub.stringWidth(subtitle)) / 2, py + 100);
+
+         g2.setFont(new Font("Monospaced", Font.BOLD, 24));
+         g2.setColor(new Color(255, 225, 140));
+         String timeText = "Zeit: " + formatDuration(getElapsedTimeMs());
+         FontMetrics fmTime = g2.getFontMetrics();
+         g2.drawString(timeText, px + (panelW - fmTime.stringWidth(timeText)) / 2, py + 158);
+
+         g2.setFont(new Font("Monospaced", Font.PLAIN, 16));
+         g2.setColor(new Color(190, 210, 230));
+         String req = "Gears 80 | Copper Plates 100 | Conveyor Belts 10";
+         FontMetrics fmReq = g2.getFontMetrics();
+         g2.drawString(req, px + (panelW - fmReq.stringWidth(req)) / 2, py + 198);
+
+         g2.setFont(new Font("SansSerif", Font.ITALIC, 14));
+         g2.setColor(new Color(170, 180, 200));
+         String hint = "Druecke ESC zum Beenden";
+         FontMetrics fmHint = g2.getFontMetrics();
+         g2.drawString(hint, px + (panelW - fmHint.stringWidth(hint)) / 2, py + 242);
       }
 
       // --- Inventory Overlay ---
@@ -1095,6 +1318,8 @@ public class GameUI extends JFrame {
             case CONVEYOR_BELT:
                // Direction-aware belt texture: fall back to non-rotated if no belt data found
                return textures.get("conveyor_belt");
+            case ROCKET_PAD:
+               return textures.get("rocket_pad");
             case MACHINE:
                return textures.get("machine_bg");
             default:

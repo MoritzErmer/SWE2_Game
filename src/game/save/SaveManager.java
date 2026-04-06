@@ -42,9 +42,19 @@ public class SaveManager {
     public static void save(GameSupervisor supervisor, WorldMap world,
                             PlayerCharacter player, List<BaseMachine> machines,
                             List<ConveyorBelt> belts, GameMode mode) {
+        save(supervisor, world, player, machines, belts, mode, null, 0L, false);
+    }
+
+    public static void save(GameSupervisor supervisor, WorldMap world,
+                            PlayerCharacter player, List<BaseMachine> machines,
+                            List<ConveyorBelt> belts, GameMode mode,
+                            GameSaveState.RocketData rocketData,
+                            long elapsedTimeMs,
+                            boolean gameCompleted) {
         supervisor.stop();
         try {
-            GameSaveState state = buildState(world, player, machines, belts, mode);
+            GameSaveState state = buildState(world, player, machines, belts, mode,
+                    rocketData, elapsedTimeMs, gameCompleted);
             Path savePath = getSavePath();
             Files.createDirectories(savePath.getParent());
             Files.writeString(savePath, GSON.toJson(state));
@@ -70,9 +80,15 @@ public class SaveManager {
 
     private static GameSaveState buildState(WorldMap world, PlayerCharacter player,
                                              List<BaseMachine> machines,
-                                             List<ConveyorBelt> belts, GameMode mode) {
+                                             List<ConveyorBelt> belts, GameMode mode,
+                                             GameSaveState.RocketData rocketData,
+                                             long elapsedTimeMs,
+                                             boolean gameCompleted) {
         GameSaveState state = new GameSaveState();
         state.gameMode = mode.name();
+        state.rocket = rocketData;
+        state.elapsedTimeMs = Math.max(0L, elapsedTimeMs);
+        state.gameCompleted = gameCompleted;
 
         // Player
         state.player = new GameSaveState.PlayerData();

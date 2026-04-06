@@ -101,11 +101,18 @@ public class WorldMap {
          try {
             if (!from.hasItem())
                return false; // Quelle hat kein Item
+            if (!to.canAcceptGroundItem())
+               return false; // Ziel nimmt keine Bodenitems an
             if (to.hasItem())
                return false; // Ziel ist bereits belegt
 
             ItemStack item = from.pickupItem();
             to.setItemOnGround(item);
+            if (!to.hasItem()) {
+               // Defensive rollback for callers that may mutate tile type concurrently.
+               from.setItemOnGround(item);
+               return false;
+            }
             return true;
          } finally {
             secondLock.unlock();

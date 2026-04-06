@@ -17,6 +17,17 @@ Auf der [Releases-Seite](https://github.com/MoritzErmer/SWE2_Game/releases/lates
 | **Normal** | Ressourcen abbauen, verarbeiten und craften |
 | **Kreativ** | Alle Rezepte ohne Materialkosten craftbar |
 
+## Spielziel
+
+- Auf jeder Karte spawnt eine 4x4 Rakete an einer zufaelligen Position.
+- Ziel ist die Reparatur der Rakete mit genau folgenden Teilen:
+	- 80 Iron Gears
+	- 100 Copper Plates
+	- 10 Conveyor Belts
+- Die Rakete kann nur manuell per Rechtsklick mit dem aktuell ausgewaehlten Hotbar-Item gefuettert werden.
+- Auf Raketen-Tiles koennen keine Maschinen, Foerderbaender oder Boden-Items platziert werden.
+- Nach vollstaendiger Reparatur startet die Rakete automatisch und es erscheint ein Endscreen mit der benoetigten Gesamtspielzeit.
+
 ## Spielstand
 
 - **Ctrl+S** — Spielstand speichern (`%APPDATA%/SWE2-Game/save.json`)

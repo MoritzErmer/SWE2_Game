@@ -60,10 +60,21 @@ public class Tile {
    }
 
    /**
+    * True if this tile may hold ground items.
+    * Rocket pads reject automated ground-item delivery and manual drops.
+    */
+   public boolean canAcceptGroundItem() {
+      return machine == null && type != TileType.ROCKET_PAD && type != TileType.MACHINE;
+   }
+
+   /**
     * Legt ein Item auf das Tile. Thread-sicher nur innerhalb eines lock()-Blocks
     * aufrufen!
     */
    public void setItemOnGround(ItemStack item) {
+      if (item != null && !canAcceptGroundItem()) {
+         return;
+      }
       this.itemOnGround = item;
    }
 

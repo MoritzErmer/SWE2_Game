@@ -6,6 +6,7 @@ import game.entity.PlayerCharacter;
 import game.logistics.ConveyorBelt;
 import game.logistics.TransportRobot;
 import game.machine.BaseMachine;
+import game.objective.RocketObjective;
 import game.save.GameSaveState;
 import game.ui.GameUI;
 import game.ui.MainMenuUI;
@@ -18,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -57,6 +59,11 @@ public class Main {
       WorldMap map = new WorldMap(MAP_WIDTH, MAP_HEIGHT);
       map.generateResources(0.15); // 15% der Tiles sind Ressourcen
 
+      RocketObjective rocketObjective = saveState
+         .map(s -> RocketObjective.fromSaveData(s.rocket, map))
+         .orElseGet(() -> RocketObjective.createRandom(map, new Random()));
+      rocketObjective.applyToMap(map);
+
       // --- Spieler erstellen ---
       PlayerCharacter player = new PlayerCharacter(MAP_WIDTH / 2, MAP_HEIGHT / 2);
       // Startinventar: Werkzeuge für Platzierung
@@ -75,7 +82,7 @@ public class Main {
 
       // --- UI im EDT starten ---
       SwingUtilities.invokeLater(() -> {
-         GameUI ui = new GameUI(map, player, gameMode);
+         GameUI ui = new GameUI(map, player, gameMode, rocketObjective, saveState.orElse(null));
          ui.setSaveContext(supervisor, machines, belts);
 
          // Creative mode is applied to CraftingManager in the GameUI constructor.

@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 import game.machine.Direction;
 
@@ -38,6 +37,7 @@ public class PixelTextures {
       cache.put("iron_deposit", generateIronDeposit());
       cache.put("copper_deposit", generateCopperDeposit());
       cache.put("coal_deposit", generateCoalDeposit());
+      cache.put("rocket_pad", generateRocketPad());
       cache.put("conveyor_belt", generateConveyorBelt());
       cache.put("machine_bg", generateMachineBg());
       cache.put("miner", generateMinerDirectional());
@@ -58,6 +58,7 @@ public class PixelTextures {
       generateMinerFrames();
       generateSmelterFrames();
       generateGrabberFrames();
+      generateRocketFrames();
    }
 
    private void generateConveyorBeltFrames() {
@@ -222,6 +223,115 @@ public class PixelTextures {
       cache.put("grabber_f1", buildFromPalette(f1, pal));
       cache.put("grabber_f2", buildFromPalette(f2, pal));
       cache.put("grabber_f3", buildFromPalette(f3, pal));
+   }
+
+   private void generateRocketFrames() {
+      for (int frame = 0; frame < 4; frame++) {
+         BufferedImage full = buildRocketSprite(frame);
+         for (int tx = 0; tx < 4; tx++) {
+            for (int ty = 0; ty < 4; ty++) {
+               BufferedImage tile = copySubImage(full, tx * PX, ty * PX, PX, PX);
+               cache.put("rocket_f" + frame + "_" + tx + "_" + ty, scaleNearest(tile));
+            }
+         }
+      }
+   }
+
+   private BufferedImage buildRocketSprite(int frame) {
+      int size = PX * 4;
+      BufferedImage sprite = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+      Graphics2D g = sprite.createGraphics();
+      g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+
+      Color hull = new Color(192, 202, 218);
+      Color hullShadow = new Color(132, 146, 166);
+      Color hullLight = new Color(225, 230, 240);
+      Color nose = new Color(220, 100, 80);
+      Color stripe = new Color(90, 120, 210);
+      Color fin = new Color(150, 160, 180);
+      Color finShadow = new Color(105, 112, 130);
+      Color engine = new Color(70, 72, 86);
+      Color engineHighlight = new Color(118, 122, 140);
+      Color windowOuter = new Color(36, 56, 92);
+      Color windowInner = new Color(120, 186, 255);
+
+      // Nose cone
+      g.setColor(nose);
+      g.fillRect(14, 1, 4, 2);
+      g.fillRect(13, 3, 6, 2);
+
+      // Main body
+      g.setColor(hull);
+      g.fillRect(10, 5, 12, 18);
+
+      // Body shading
+      g.setColor(hullShadow);
+      g.fillRect(10, 5, 2, 18);
+      g.setColor(hullLight);
+      g.fillRect(20, 5, 2, 18);
+
+      // Accent stripes and cockpit
+      g.setColor(stripe);
+      g.fillRect(11, 12, 10, 2);
+      g.fillRect(11, 17, 10, 1);
+
+      g.setColor(windowOuter);
+      g.fillRect(14, 8, 4, 4);
+      g.setColor(windowInner);
+      g.fillRect(15, 9, 2, 2);
+
+      // Side fins
+      g.setColor(fin);
+      g.fillRect(8, 18, 2, 7);
+      g.fillRect(22, 18, 2, 7);
+      g.setColor(finShadow);
+      g.fillRect(8, 18, 1, 7);
+      g.fillRect(23, 18, 1, 7);
+
+      // Engine block and nozzles
+      g.setColor(engine);
+      g.fillRect(12, 23, 8, 3);
+      g.setColor(engineHighlight);
+      g.fillRect(12, 23, 8, 1);
+      g.setColor(engine);
+      g.fillRect(12, 26, 2, 2);
+      g.fillRect(15, 26, 2, 2);
+      g.fillRect(18, 26, 2, 2);
+
+      int[] flameLengths = { 0, 3, 5, 2 };
+      int flameLength = flameLengths[Math.floorMod(frame, flameLengths.length)];
+      if (flameLength > 0) {
+         Color flameOuter = new Color(255, 168, 56);
+         Color flameCore = new Color(255, 228, 140);
+         int[] nozzleCenters = { 13, 16, 19 };
+         for (int centerX : nozzleCenters) {
+            g.setColor(flameOuter);
+            g.fillRect(centerX - 1, 27, 2, flameLength);
+            g.setColor(flameCore);
+            g.fillRect(centerX, 27, 1, Math.max(1, flameLength - 1));
+         }
+      }
+
+      g.dispose();
+      return sprite;
+   }
+
+   private BufferedImage generateRocketPad() {
+      Color base = new Color(60, 66, 78);
+      Color plate = new Color(86, 95, 110);
+      Color stripe = new Color(220, 180, 72);
+      Color center = new Color(160, 205, 245);
+      int[][] map = {
+            { 2, 1, 1, 1, 1, 1, 1, 2 },
+            { 1, 0, 0, 1, 1, 0, 0, 1 },
+            { 1, 0, 3, 3, 3, 3, 0, 1 },
+            { 1, 1, 3, 0, 0, 3, 1, 1 },
+            { 1, 1, 3, 0, 0, 3, 1, 1 },
+            { 1, 0, 3, 3, 3, 3, 0, 1 },
+            { 1, 0, 0, 1, 1, 0, 0, 1 },
+            { 2, 1, 1, 1, 1, 1, 1, 2 },
+      };
+      return buildFromPalette(map, new Color[] { base, plate, stripe, center });
    }
 
    // --- Grass: Grüntöne mit zufälligen dunkleren Grashalmen ---
@@ -561,6 +671,14 @@ public class PixelTextures {
    }
 
    // ==================== Helpers ====================
+
+   private BufferedImage copySubImage(BufferedImage src, int x, int y, int w, int h) {
+      BufferedImage copy = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+      Graphics2D g = copy.createGraphics();
+      g.drawImage(src, 0, 0, w, h, x, y, x + w, y + h, null);
+      g.dispose();
+      return copy;
+   }
 
    /**
     * Baut ein 8x8 BufferedImage aus einer Palettenindex-Map. Skaliert auf

@@ -94,7 +94,6 @@ public class Grabber extends BaseMachine {
       Tile dstTile = worldMap.getTile(dstX, dstY);
 
       // Lock-Ordering: Sortiere nach identityHashCode um Deadlocks zu vermeiden
-      Tile first, second, third;
       Tile[] sorted = sortByHash(tile, srcTile, dstTile);
       sorted[0].getLock().lock();
       try {
@@ -178,6 +177,10 @@ public class Grabber extends BaseMachine {
       }
 
       // Priorität 2: Auf den Boden legen
+      if (!dstTile.canAcceptGroundItem()) {
+         return false;
+      }
+
       if (!dstTile.hasItem()) {
          dstTile.setItemOnGround(item);
          return true;
