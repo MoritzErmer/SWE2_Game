@@ -3,6 +3,9 @@ package game.machine;
 import game.entity.ItemStack;
 import game.world.Tile;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Abstrakte Basisklasse für alle Maschinen.
  * Nutzt das Strategy-Pattern für verschiedene Produktionstypen.
@@ -107,6 +110,14 @@ public abstract class BaseMachine {
       return false;
    }
 
+   /**
+    * Automation-Hook: versucht Input von einer bestimmten Seite einzulegen.
+    * Standardverhalten bleibt abwärtskompatibel und ignoriert die Seite.
+    */
+   public boolean tryInsertInputFromSide(ItemStack item, Direction incomingSide) {
+      return tryInsertInput(item);
+   }
+
    public ItemStack getOutputBuffer() {
       return outputBuffer;
    }
@@ -115,11 +126,38 @@ public abstract class BaseMachine {
       this.outputBuffer = item;
    }
 
+   /**
+    * Entnimmt alle in der Maschine gespeicherten Items (Input + Output) und
+    * leert die Buffer.
+    */
+   public List<ItemStack> drainStoredItems() {
+      List<ItemStack> drained = new ArrayList<>();
+
+      if (hasInput()) {
+         drained.add(inputBuffer);
+      }
+      if (hasOutput()) {
+         drained.add(outputBuffer);
+      }
+
+      inputBuffer = null;
+      outputBuffer = null;
+      return drained;
+   }
+
    /** Entnimmt den gesamten Output-Buffer und gibt ihn zurück. */
    public ItemStack extractOutput() {
       ItemStack out = outputBuffer;
       outputBuffer = null;
       return out;
+   }
+
+   /**
+    * Automation-Hook: ob Output von einer bestimmten Seite entnommen werden darf.
+    * Standard: von allen Seiten erlaubt.
+    */
+   public boolean canExtractOutputFromSide(Direction extractionSide) {
+      return true;
    }
 
    /** Prüft ob der Output-Buffer leer ist. */

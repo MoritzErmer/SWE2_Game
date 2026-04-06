@@ -26,7 +26,7 @@ mvn test -Dgroups=stress
 
 ## Architecture
 
-This is a 2D real-time automation game (Java/Swing) where the player builds production chains via miners, smelters, conveyor belts, and transport robots. The central challenge is correctness under concurrency.
+This is a 2D real-time automation game (Java/Swing) where the player builds production chains via miners, smelters, conveyor belts. The central challenge is correctness under concurrency.
 
 ### Thread Model
 

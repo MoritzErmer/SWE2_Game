@@ -13,7 +13,7 @@ import game.world.WorldMap;
  * - Nimmt Items vom Output-Buffer einer Maschine auf dem Quell-Tile
  * ODER von einem Förderband-Quell-Tile
  * - Legt sie in den Input-Buffer einer Maschine auf dem Ziel-Tile
- * ODER auf den Boden des Ziel-Tiles
+ * ODER auf ein Foerderband-Zieltile
  * - Verbraucht Kohle aus seinem eigenen Input-Buffer als Brennstoff
  *
  * Thread-Sicherheit: tick() wird vom ScheduledExecutorService aufgerufen.
@@ -29,7 +29,7 @@ public class Grabber extends BaseMachine {
    private final WorldMap worldMap;
    private final int tileX;
    private final int tileY;
-   private int fuelCounter = 0; // Zählt Transfers, alle 8 wird 1 Kohle verbraucht
+   private int transferCredits = 0; // Verbleibende Transfers aus bereits verbrauchter Kohle
 
    private static final int TRANSFERS_PER_COAL = 8;
 
@@ -94,7 +94,6 @@ public class Grabber extends BaseMachine {
       Tile dstTile = worldMap.getTile(dstX, dstY);
 
       // Lock-Ordering: Sortiere nach identityHashCode um Deadlocks zu vermeiden
-      Tile first, second, third;
       Tile[] sorted = sortByHash(tile, srcTile, dstTile);
       sorted[0].getLock().lock();
       try {
@@ -122,6 +121,10 @@ public class Grabber extends BaseMachine {
       if (!hasFuel())
          return;
 
+      // Ohne Maschinenziel darf nur auf ein freies Förderband geliefert werden.
+      if (!dstTile.hasMachine() && (!dstTile.isConveyorBelt() || dstTile.hasItem()))
+         return;
+
       // Item von Quelle holen
       ItemStack item = extractFromSource(srcTile);
       if (item == null)
@@ -140,21 +143,26 @@ public class Grabber extends BaseMachine {
    }
 
    /**
-    * Entnimmt 1 Item von der Quelle (Maschinen-Output > Boden-Item).
+    * Entnimmt 1 Item von der Quelle (Maschinen-Output).
     */
    private ItemStack extractFromSource(Tile srcTile) {
       // Priorität 1: Output-Buffer einer Maschine auf dem Quell-Tile
       if (srcTile.hasMachine() && srcTile.getMachine().hasOutput()) {
-         ItemStack out = srcTile.getMachine().getOutputBuffer();
-         ItemType type = out.getType();
-         out.remove(1);
-         if (out.getAmount() <= 0) {
-            srcTile.getMachine().setOutputBuffer(null);
+         Direction extractionSide = Direction.fromDxDy(-sourceDx, -sourceDy);
+         if (canExtractOutputFromSideCompat(srcTile.getMachine(), extractionSide)) {
+            ItemStack out = srcTile.getMachine().getOutputBuffer();
+            if (out != null && out.getAmount() > 0) {
+               ItemType type = out.getType();
+               out.remove(1);
+               if (out.getAmount() <= 0) {
+                  srcTile.getMachine().setOutputBuffer(null);
+               }
+               return new ItemStack(type, 1);
+            }
          }
-         return new ItemStack(type, 1);
       }
 
-      // Priorität 2: Boden-Item nur von Förderband-Tiles entnehmen
+      // Prioritaet 2: Item vom Förderband
       if (srcTile.isConveyorBelt() && srcTile.hasItem()) {
          ItemStack ground = srcTile.getItemOnGround();
          ItemType type = ground.getType();
@@ -169,33 +177,97 @@ public class Grabber extends BaseMachine {
    }
 
    /**
-    * Liefert 1 Item an das Ziel (Maschinen-Input > Boden).
+    * Liefert 1 Item an das Ziel (Maschinen-Input > Foerderband).
     */
    private boolean deliverToDestination(Tile dstTile, ItemStack item) {
       // Priorität 1: Input-Buffer einer Maschine auf dem Ziel-Tile
       if (dstTile.hasMachine()) {
-         return dstTile.getMachine().tryInsertInput(item);
+         Direction incomingSide = Direction.fromDxDy(-destDx, -destDy);
+         return tryInsertInputFromSideCompat(dstTile.getMachine(), item, incomingSide);
       }
 
-      // Priorität 2: Auf den Boden legen
-      if (dstTile.canAcceptGroundItem()) {
+      // Prioritaet 2: Auf Förderband legen
+      if (!dstTile.isConveyorBelt()) {
+         return false;
+      }
+
+      if (!dstTile.hasItem()) {
          dstTile.setItemOnGround(item);
          return true;
       }
 
-      return false; // Ziel belegt oder nicht erlaubt
+      return false; // Ziel belegt mit anderem Item
    }
 
    /**
     * Legt ein Item zurück zur Quelle wenn Ziel voll war.
+    *
+    * Das Zurücklegen darf niemals stillschweigend fehlschlagen, da sonst Items
+      * verloren gehen können. Wenn weder Maschinen-Output noch Foerderbandablage
+      * moeglich
+    * ist, wird deshalb explizit ein Fehler ausgelöst.
     */
    private void returnToSource(Tile srcTile, ItemStack item) {
       if (srcTile.hasMachine() && srcTile.getMachine().hasOutput()) {
-         srcTile.getMachine().getOutputBuffer().add(item.getAmount());
-      } else if (srcTile.hasMachine()) {
+         ItemStack out = srcTile.getMachine().getOutputBuffer();
+         if (out != null && out.getType() == item.getType()) {
+            out.add(item.getAmount());
+            return;
+         }
+      }
+
+      if (srcTile.hasMachine() && !srcTile.getMachine().hasOutput()) {
          srcTile.getMachine().setOutputBuffer(item);
-      } else if (srcTile.canAcceptGroundItem()) {
-         srcTile.setItemOnGround(item);
+         return;
+      }
+
+      if (!srcTile.hasMachine() && srcTile.isConveyorBelt()) {
+         if (!srcTile.hasItem()) {
+            srcTile.setItemOnGround(item);
+            return;
+         }
+         if (srcTile.getItemOnGround().getType() == item.getType()) {
+            return;
+         }
+      }
+
+      throw new IllegalStateException("Failed to return item to source tile: " + item);
+   }
+
+   /**
+    * Kompatibilitäts-Helfer: side-aware Output-Extraction falls vorhanden,
+    * ansonsten permissiver Fallback.
+    */
+   private boolean canExtractOutputFromSideCompat(BaseMachine machine, Direction extractionSide) {
+      try {
+         java.lang.reflect.Method method = machine.getClass().getMethod(
+               "canExtractOutputFromSide", Direction.class);
+         Object result = method.invoke(machine, extractionSide);
+         if (result instanceof Boolean) {
+            return (Boolean) result;
+         }
+         return true;
+      } catch (NoSuchMethodException ignored) {
+         return true;
+      } catch (ReflectiveOperationException e) {
+         return false;
+      }
+   }
+
+   /**
+    * Kompatibilitäts-Helfer: side-aware Input falls vorhanden,
+    * sonst normaler tryInsertInput-Fallback.
+    */
+   private boolean tryInsertInputFromSideCompat(BaseMachine machine, ItemStack item, Direction incomingSide) {
+      try {
+         java.lang.reflect.Method method = machine.getClass().getMethod(
+               "tryInsertInputFromSide", ItemStack.class, Direction.class);
+         Object result = method.invoke(machine, item, incomingSide);
+         return result instanceof Boolean && (Boolean) result;
+      } catch (NoSuchMethodException ignored) {
+         return machine.tryInsertInput(item);
+      } catch (ReflectiveOperationException e) {
+         return false;
       }
    }
 
@@ -203,27 +275,33 @@ public class Grabber extends BaseMachine {
     * Prüft ob genug Brennstoff vorhanden ist.
     */
    private boolean hasFuel() {
-      // Erste Transfers sind kostenlos bis der Zähler voll ist
-      if (fuelCounter < TRANSFERS_PER_COAL)
-         return true;
-      // Kohle im Input-Buffer?
-      return hasInput() && inputBuffer.getType() == ItemType.COAL;
+      return transferCredits > 0 || (hasInput() && inputBuffer.getType() == ItemType.COAL);
    }
 
    /**
     * Verbraucht Brennstoff nach einem erfolgreichen Transfer.
     */
    private void consumeFuel() {
-      fuelCounter++;
-      if (fuelCounter >= TRANSFERS_PER_COAL) {
-         fuelCounter = 0;
-         if (hasInput() && inputBuffer.getType() == ItemType.COAL) {
-            inputBuffer.remove(1);
-            if (inputBuffer.getAmount() <= 0) {
-               inputBuffer = null;
-            }
-         }
+      if (transferCredits <= 0 && !refillTransferCredits()) {
+         throw new IllegalStateException("Grabber transfer succeeded without available coal fuel.");
       }
+      transferCredits--;
+   }
+
+   /**
+    * Wandelt 1 Kohle aus dem Input-Buffer in Transfer-Credits um.
+    */
+   private boolean refillTransferCredits() {
+      if (!(hasInput() && inputBuffer.getType() == ItemType.COAL)) {
+         return false;
+      }
+
+      inputBuffer.remove(1);
+      if (inputBuffer.getAmount() <= 0) {
+         inputBuffer = null;
+      }
+      transferCredits += TRANSFERS_PER_COAL;
+      return true;
    }
 
    /**

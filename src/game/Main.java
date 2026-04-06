@@ -59,7 +59,7 @@ public class Main {
       WorldMap map = new WorldMap(MAP_WIDTH, MAP_HEIGHT);
       PlayerCharacter player = new PlayerCharacter(MAP_WIDTH / 2, MAP_HEIGHT / 2);
 
-      // --- Maschinen, Belts, Roboter (initial leer, werden im Spiel platziert) ---
+      // --- Maschinen, Belts (initial leer, werden im Spiel platziert) ---
       List<BaseMachine> machines = new CopyOnWriteArrayList<>();
       List<ConveyorBelt> belts = new CopyOnWriteArrayList<>();
 
@@ -77,7 +77,6 @@ public class Main {
       // --- UI im EDT starten ---
       SwingUtilities.invokeLater(() -> {
          GameUI ui = new GameUI(map, player, gameMode);
-         // Use supervisor-managed lists so UI rendering and save snapshots see live updates.
          ui.setSaveContext(supervisor, supervisor.getMachines(), supervisor.getBelts());
 
          // Creative mode is applied to CraftingManager in the GameUI constructor.
@@ -118,7 +117,7 @@ public class Main {
       supervisor.start();
 
       System.out.println("=== 2D Automation Game gestartet ===");
-      System.out.println("Steuerung: WASD=Bewegen, 1=Miner, 2=Smelter, E=Item aufheben");
+      System.out.println("Steuerung: WASD=Bewegen, Enter=Mining, E=Inventar, C=Crafting, R=Rotation, Q=Dekonstruktion");
       System.out.println("Karte: " + MAP_WIDTH + "x" + MAP_HEIGHT + " Tiles");
    }
 
@@ -126,6 +125,7 @@ public class Main {
       player.addItem(ItemType.MINER_KIT, 10);
       player.addItem(ItemType.SMELTER_KIT, 10);
       player.addItem(ItemType.GRABBER_KIT, 10);
+      player.addItem(ItemType.FORGE_KIT, 10);
       player.addItem(ItemType.CONVEYOR_BELT_ITEM, 50);
    }
 

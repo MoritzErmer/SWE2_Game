@@ -75,10 +75,13 @@ public class WorldMap {
     * - Mit expliziten Locks und konsistenter Ordnung ist Deadlock-Freiheit
     * beweisbar.
     *
-    * @return true wenn Transfer erfolgreich, false wenn Quelle leer oder Ziel
-    *         belegt.
+      * @return true wenn Transfer erfolgreich, false wenn Quelle leer oder Ziel
+      *         belegt.
     */
    public boolean transferItem(Tile from, Tile to) {
+      if (from == null || to == null || from == to)
+         return false;
+
       // Konsistente Lock-Ordnung nach identityHashCode (sicherer als hashCode())
       int fromHash = System.identityHashCode(from);
       int toHash = System.identityHashCode(to);
@@ -99,17 +102,22 @@ public class WorldMap {
       try {
          secondLock.lock();
          try {
+            if (!from.isConveyorBelt())
+               return false; // Boden-Items dürfen nur auf Förderbändern liegen
             if (!from.hasItem())
                return false; // Quelle hat kein Item
-            if (!to.canAcceptGroundItem())
+            if (!canAcceptGroundItemCompat(to))
                return false; // Ziel belegt oder Maschine
 
             // Welt-Items werden immer als einzelne Einheiten transportiert.
             ItemStack sourceItem = from.getItemOnGround();
+            if (sourceItem == null)
+               return false; // Defensive Absicherung gegen inkonsistenten Tile-Zustand
+
             ItemStack movedItem = new ItemStack(sourceItem.getType(), 1);
 
             sourceItem.remove(1);
-            if (sourceItem.getAmount() <= 0) {
+            if (sourceItem.getAmount() == 0) {
                from.setItemOnGround(null);
             }
 
@@ -121,6 +129,22 @@ public class WorldMap {
       } finally {
          firstLock.unlock();
       }
+   }
+
+   private boolean canAcceptGroundItemCompat(Tile tile) {
+      try {
+         java.lang.reflect.Method method = tile.getClass().getMethod("canAcceptGroundItem");
+         Object result = method.invoke(tile);
+         if (result instanceof Boolean) {
+            return (Boolean) result;
+         }
+      } catch (NoSuchMethodException ignored) {
+         // Fallback unten
+      } catch (ReflectiveOperationException e) {
+         return false;
+      }
+
+      return tile.getType() == TileType.CONVEYOR_BELT && !tile.hasMachine() && !tile.hasItem();
    }
 
    public int getWidth() {

@@ -65,9 +65,9 @@ public class CraftingManager {
             .result(ItemType.COPPER_PLATE, 4)
             .build());
 
-      // Eisenzahnrad: 2 Eisenplatten → 1 Zahnrad
+      // Eisenzahnrad: 8 Eisenplatten → 1 Zahnrad
       recipes.add(CraftingRecipe.builder("Iron Gear")
-            .ingredient(ItemType.IRON_PLATE, 2)
+            .ingredient(ItemType.IRON_PLATE, 8)
             .result(ItemType.IRON_GEAR, 1)
             .build());
 
@@ -101,6 +101,16 @@ public class CraftingManager {
             .ingredient(ItemType.COPPER_PLATE, 1)
             .result(ItemType.GRABBER_KIT, 1)
             .build());
+
+      // Forge: 2 Eisenzahnräder + 4 Eisenplatten + 1 Kupferplatte + 1 Kohle -> 1
+      // Forge
+      recipes.add(CraftingRecipe.builder("Forge")
+         .ingredient(ItemType.IRON_GEAR, 2)
+         .ingredient(ItemType.IRON_PLATE, 4)
+         .ingredient(ItemType.COPPER_PLATE, 1)
+         .ingredient(ItemType.COAL, 1)
+         .result(ItemType.FORGE_KIT, 1)
+         .build());
    }
 
    /**

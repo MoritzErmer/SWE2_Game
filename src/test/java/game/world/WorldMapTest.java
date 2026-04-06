@@ -15,6 +15,9 @@ class WorldMapTest {
         Tile from = map.getTile(0, 0);
         Tile to = map.getTile(1, 0);
 
+        from.setType(TileType.CONVEYOR_BELT);
+        to.setType(TileType.CONVEYOR_BELT);
+
         from.getLock().lock();
         try {
             from.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
@@ -36,6 +39,9 @@ class WorldMapTest {
         WorldMap map = new WorldMap(3, 3);
         Tile from = map.getTile(0, 0);
         Tile to = map.getTile(1, 0);
+
+        from.setType(TileType.CONVEYOR_BELT);
+        to.setType(TileType.CONVEYOR_BELT);
 
         from.getLock().lock();
         to.getLock().lock();
@@ -59,6 +65,7 @@ class WorldMapTest {
         WorldMap map = new WorldMap(3, 3);
         Tile from = map.getTile(0, 0);
         Tile to = map.getTile(1, 0);
+        from.setType(TileType.CONVEYOR_BELT);
 
         from.getLock().lock();
         to.getLock().lock();
@@ -79,34 +86,59 @@ class WorldMapTest {
     }
 
     @Test
-    void tileRejectsGroundStacks() {
-        Tile tile = new Tile();
+    void transferItemReturnsFalseWhenSourceIsNotConveyor() {
+        WorldMap map = new WorldMap(3, 3);
+        Tile from = map.getTile(0, 0);
+        Tile to = map.getTile(1, 0);
+        to.setType(TileType.CONVEYOR_BELT);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> tile.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 2)));
+        from.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
+        assertFalse(from.hasItem(), "Non-conveyor source must reject ground items.");
 
-        assertTrue(ex.getMessage().contains("may not stack"));
+        boolean moved = map.transferItem(from, to);
+
+        assertFalse(moved);
+        assertFalse(to.hasItem());
     }
 
     @Test
-    void tileRejectsItemPlacementOnMachineTile() {
+    void setTypeClearsGroundItemWhenLeavingConveyor() {
+        Tile tile = new Tile();
+        tile.setType(TileType.CONVEYOR_BELT);
+        tile.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
+        assertTrue(tile.hasItem());
+
+        tile.setType(TileType.EMPTY);
+
+        assertFalse(tile.hasItem());
+    }
+
+    @Test
+    void tileIgnoresGroundStacksOnNonConveyorTile() {
+        Tile tile = new Tile();
+
+        tile.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 2));
+
+        assertFalse(tile.hasItem());
+    }
+
+    @Test
+    void tileIgnoresItemPlacementOnMachineTile() {
         Tile tile = new Tile();
         tile.setMachine(new Smelter(tile));
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> tile.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1)));
+        tile.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
 
-        assertTrue(ex.getMessage().contains("machine tile"));
+        assertFalse(tile.hasItem());
     }
 
     @Test
-    void tileRejectsMachinePlacementOnOccupiedTile() {
+    void tileAllowsMachinePlacementWhenNonConveyorGroundItemWasIgnored() {
         Tile tile = new Tile();
         tile.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> tile.setMachine(new Smelter(tile)));
-
-        assertTrue(ex.getMessage().contains("contains an item"));
+        assertFalse(tile.hasItem());
+        assertDoesNotThrow(() -> tile.setMachine(new Smelter(tile)));
+        assertTrue(tile.hasMachine());
     }
 }

@@ -42,7 +42,7 @@ Die Spielidee ist bewusst auf die Verbindung von Gameplay und Nebenläufigkeit a
 - `E`: Inventar
 - `C`: Crafting-Menü
 - `1..9`: Hotbar-Auswahl
-- Linksklick: Item/Maschine platzieren
+- Linksklick: Infrastruktur platzieren
 - Rechtsklick: Maschineninteraktion (Input/Output)
 - `R`: Rotation platzierter Maschinen
 - `Q`: Dekonstruktion (Maschinen und Förderbänder)
