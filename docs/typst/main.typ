@@ -9,7 +9,7 @@
 #let semester = "WS 2025/2026"
 
 #set document(
-  title: [Programmentwurf: Multithreaded 2D Automation Game]
+  title: [Programmentwurf: Multithreaded 2D Automation Game],
 )
 
 #title()
@@ -63,15 +63,13 @@ Die Anwendung nutzt die folgenden Thread-Kategorien:
 1. `EDT` (Swing Event Dispatch Thread): Rendering und UI-Ereignisse.
 2. `ScheduledExecutorService` (Maschinen-Pool): periodische `tick()`-Ausführung je Maschine.
 3. `Logistics-Thread` (SingleThreadExecutor): globale Förderbandlogik.
-4. `Robot-*` Threads (CachedThreadPool): autonome Transportroboter.
-5. `CollisionHandler` (dedizierter Thread): zyklische Kollisionserkennung.
 
-Damit ist die Forderung nach mindestens drei Threads deutlich überschritten.
+Damit ist die Forderung nach mindestens drei Threads erfüllt.
 
 == Gemeinsam genutzte Ressourcen
 
 - Weltzustand (`WorldMap`, `Tile`-Objekte)
-- Maschinenlisten, Beltlisten, Roboterlisten
+- Maschinenlisten, Beltlisten
 - Maschineninterne Puffer (`inputBuffer`, `outputBuffer`)
 - Inventarzustand der Spielfigur
 
@@ -93,16 +91,48 @@ Die folgenden Anforderungen sind konsistent, verifizierbar und umsetzbar formuli
   stroke: 0.5pt,
   [*ID*], [*Anforderung*], [*Typ*], [*Verifikation*],
 
-  [F-01], [Die Anwendung muss eine spielbare 2D-Karte mit Ressourcentiles bereitstellen.], [Funktional], [Manueller Test],
-  [F-02], [Die Spielfigur muss per Tastaturbewegung innerhalb der Weltgrenzen steuerbar sein.], [Funktional], [Unit + manuell],
+  [F-01],
+  [Die Anwendung muss eine spielbare 2D-Karte mit Ressourcentiles bereitstellen.],
+  [Funktional],
+  [Manueller Test],
+
+  [F-02],
+  [Die Spielfigur muss per Tastaturbewegung innerhalb der Weltgrenzen steuerbar sein.],
+  [Funktional],
+  [Unit + manuell],
+
   [F-03], [Ressourcenabbau auf Deposit-Tiles muss zeitabhaengig erfolgen.], [Funktional], [Integrationstest],
-  [F-04], [Crafting muss definierte Rezepte pruefen und Ergebnisse ins Inventar uebertragen.], [Funktional], [Unit-Test],
-  [F-05], [Maschinen (Miner, Schmelzer, Greifer) muessen platzierbar und dekonstruierbar sein.], [Funktional], [Manueller Test],
-  [F-06], [Foerderbaender muessen als Logistikobjekte registriert werden und Items transportieren.], [Funktional], [Integrationstest],
-  [F-07], [Das System muss mindestens drei parallele Threads mit Spielverantwortung nutzen.], [Funktional], [Architektur-Nachweis],
-  [F-08], [Gemeinsam genutzte Ressourcen muessen gegen Inkonsistenz durch Synchronisation geschuetzt sein.], [Nicht-funktional], [Code-Review + Tests],
-  [F-09], [Das Projekt muss fehlerfrei kompilierbar und als standalone JAR startbar sein.], [Nicht-funktional], [Build-Pipeline],
-  [F-10], [Unter Windows soll ein EXE-Paket ueber `jpackage` erzeugbar sein.], [Nicht-funktional], [Packaging-Skript]
+  [F-04],
+  [Crafting muss definierte Rezepte pruefen und Ergebnisse ins Inventar uebertragen.],
+  [Funktional],
+  [Unit-Test],
+
+  [F-05],
+  [Maschinen (Miner, Schmelzer, Greifer) muessen platzierbar und dekonstruierbar sein.],
+  [Funktional],
+  [Manueller Test],
+
+  [F-06],
+  [Foerderbaender muessen als Logistikobjekte registriert werden und Items transportieren.],
+  [Funktional],
+  [Integrationstest],
+
+  [F-07],
+  [Das System muss mindestens drei parallele Threads mit Spielverantwortung nutzen.],
+  [Funktional],
+  [Architektur-Nachweis],
+
+  [F-08],
+  [Gemeinsam genutzte Ressourcen muessen gegen Inkonsistenz durch Synchronisation geschuetzt sein.],
+  [Nicht-funktional],
+  [Code-Review + Tests],
+
+  [F-09],
+  [Das Projekt muss fehlerfrei kompilierbar und als standalone JAR startbar sein.],
+  [Nicht-funktional],
+  [Build-Pipeline],
+
+  [F-10], [Unter Windows soll ein EXE-Paket ueber `jpackage` erzeugbar sein.], [Nicht-funktional], [Packaging-Skript],
 )
 
 = Architektur und Design Patterns

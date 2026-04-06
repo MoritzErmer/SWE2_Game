@@ -5,7 +5,6 @@ import game.entity.ItemStack;
 import game.entity.ItemType;
 import game.entity.PlayerCharacter;
 import game.logistics.ConveyorBelt;
-import game.logistics.TransportRobot;
 import game.machine.BaseMachine;
 import game.machine.Grabber;
 import game.machine.Miner;
@@ -35,9 +34,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * - Producer-Thread-Pool: Jede Maschine hat einen periodischen Task
  * (ScheduledExecutorService).
  * - Logistics-Thread: Globaler asynchroner Thread für Fließband-Transport.
- * - Robot-Threads: Jeder TransportRobot als eigenständiger Thread
- * (CachedThreadPool).
- * - Collision-Thread: Dedizierter Thread für Kollisionsprüfung.
  */
 public class Main {
 
@@ -66,7 +62,6 @@ public class Main {
       // --- Maschinen, Belts, Roboter (initial leer, werden im Spiel platziert) ---
       List<BaseMachine> machines = new CopyOnWriteArrayList<>();
       List<ConveyorBelt> belts = new CopyOnWriteArrayList<>();
-      List<TransportRobot> robots = new CopyOnWriteArrayList<>();
 
       if (saveState.isPresent()) {
          restoreFromSave(saveState.get(), map, player, machines, belts);
@@ -77,7 +72,7 @@ public class Main {
       }
 
       // --- Game Supervisor erstellen ---
-      GameSupervisor supervisor = new GameSupervisor(map, machines, belts, robots);
+      GameSupervisor supervisor = new GameSupervisor(map, machines, belts);
 
       // --- UI im EDT starten ---
       SwingUtilities.invokeLater(() -> {
@@ -391,8 +386,7 @@ public class Main {
     * the user makes a selection. Safe to call from the main thread.
     */
    private static MainMenuUI.MenuResult showMainMenu() throws Exception {
-      java.util.concurrent.CompletableFuture<MainMenuUI.MenuResult> future =
-            new java.util.concurrent.CompletableFuture<>();
+      java.util.concurrent.CompletableFuture<MainMenuUI.MenuResult> future = new java.util.concurrent.CompletableFuture<>();
       SwingUtilities.invokeLater(() -> {
          MainMenuUI menu = new MainMenuUI();
          menu.showMenu().thenAccept(future::complete);
