@@ -77,6 +77,7 @@ public class Main {
       // --- UI im EDT starten ---
       SwingUtilities.invokeLater(() -> {
          GameUI ui = new GameUI(map, player, gameMode);
+         // Use supervisor-managed lists so UI rendering and save snapshots see live updates.
          ui.setSaveContext(supervisor, supervisor.getMachines(), supervisor.getBelts());
 
          // Creative mode is applied to CraftingManager in the GameUI constructor.

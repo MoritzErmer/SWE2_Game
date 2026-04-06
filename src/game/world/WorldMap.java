@@ -101,11 +101,19 @@ public class WorldMap {
          try {
             if (!from.hasItem())
                return false; // Quelle hat kein Item
-            if (to.hasItem())
-               return false; // Ziel ist bereits belegt
+            if (!to.canAcceptGroundItem())
+               return false; // Ziel belegt oder Maschine
 
-            ItemStack item = from.pickupItem();
-            to.setItemOnGround(item);
+            // Welt-Items werden immer als einzelne Einheiten transportiert.
+            ItemStack sourceItem = from.getItemOnGround();
+            ItemStack movedItem = new ItemStack(sourceItem.getType(), 1);
+
+            sourceItem.remove(1);
+            if (sourceItem.getAmount() <= 0) {
+               from.setItemOnGround(null);
+            }
+
+            to.setItemOnGround(movedItem);
             return true;
          } finally {
             secondLock.unlock();
