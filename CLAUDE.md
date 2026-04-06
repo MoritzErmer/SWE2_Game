@@ -37,8 +37,6 @@ Five concurrent execution contexts are always running:
 | EDT | Swing | UI rendering at 30 FPS |
 | `ScheduledExecutorService` (producer pool) | `GameSupervisor` | Ticks each machine every 500ms |
 | `LogisticsThread` (single-threaded executor) | `GameSupervisor` | Moves items along conveyor belts |
-| CachedThreadPool (robot pool) | `GameSupervisor` | One thread per `TransportRobot` |
-| `CollisionHandler` thread | `GameSupervisor` | Polls for robot collisions every 50ms |
 
 `GameSupervisor` owns all executors and is the single point of lifecycle control (start/shutdown).
 
@@ -46,16 +44,16 @@ Five concurrent execution contexts are always running:
 
 - **Per-tile locking**: Each `Tile` holds a `ReentrantLock`. Locks are never held at the map level.
 - **Deadlock prevention**: Multi-tile transfers always acquire locks in `System.identityHashCode` order.
-- **Thread-safe collections**: `CopyOnWriteArrayList` for machine/belt/robot lists; `ConcurrentHashMap` for belt indices.
-- **Lifecycle flags**: `AtomicBoolean` for running state; `volatile` for player/robot positions.
+- **Thread-safe collections**: `CopyOnWriteArrayList` for machine/belt lists; `ConcurrentHashMap` for belt indices.
+- **Lifecycle flags**: `AtomicBoolean` for running state; `volatile` for player positions.
 
 ### Key Packages
 
-- `game.core` — `GameSupervisor` (thread lifecycle), `CollisionHandler`
+- `game.core` — `GameSupervisor` (thread lifecycle)
 - `game.world` — `WorldMap` (2D grid), `Tile` (per-cell lock + item storage)
 - `game.entity` — `PlayerCharacter`, `ItemStack`, `ItemType`
 - `game.machine` — `BaseMachine` + subclasses (`Miner`, `Smelter`, `Grabber`), production strategies (Strategy pattern)
-- `game.logistics` — `ConveyorBelt`, `LogisticsThread`, `TransportRobot`
+- `game.logistics` — `ConveyorBelt`, `LogisticsThread`
 - `game.crafting` — `CraftingManager`, `CraftingRecipe` (8 default recipes)
 - `game.ui` — `GameUI` (Swing, 32×32 tile rendering), `PixelTextures`
 
