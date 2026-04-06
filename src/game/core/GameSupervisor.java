@@ -24,8 +24,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Fließband-Logik.
  */
 public class GameSupervisor {
-   private final ScheduledExecutorService machineExecutor;
-   private final ExecutorService logisticsExecutor;
+   private ScheduledExecutorService machineExecutor;
+   private ExecutorService logisticsExecutor;
    private final List<BaseMachine> machines;
    private final List<ConveyorBelt> belts;
    private final WorldMap map;
@@ -41,13 +41,7 @@ public class GameSupervisor {
       this.map = map;
       this.machines = new CopyOnWriteArrayList<>(machines);
       this.belts = new CopyOnWriteArrayList<>(belts);
-      this.machineExecutor = Executors.newScheduledThreadPool(
-            Runtime.getRuntime().availableProcessors());
-      this.logisticsExecutor = Executors.newSingleThreadExecutor(r -> {
-         Thread t = new Thread(r, "Logistics-Thread");
-         t.setDaemon(true);
-         return t;
-      });
+      initializeExecutors();
 
       for (ConveyorBelt belt : this.belts) {
          beltIndex.put(beltKey(belt.getX(), belt.getY()), belt);
@@ -180,18 +174,11 @@ public class GameSupervisor {
          t.setDaemon(true);
          return t;
       });
-      this.robotExecutor = Executors.newCachedThreadPool(r -> {
-         Thread t = new Thread(r, "Robot-" + System.nanoTime());
-         t.setDaemon(true);
-         return t;
-      });
-      this.collisionHandler = new CollisionHandler(this.robots);
    }
 
    private void ensureExecutorsRunning() {
       if (machineExecutor == null || machineExecutor.isShutdown() || machineExecutor.isTerminated()
-            || logisticsExecutor == null || logisticsExecutor.isShutdown() || logisticsExecutor.isTerminated()
-            || robotExecutor == null || robotExecutor.isShutdown() || robotExecutor.isTerminated()) {
+            || logisticsExecutor == null || logisticsExecutor.isShutdown() || logisticsExecutor.isTerminated()) {
          initializeExecutors();
       }
    }
