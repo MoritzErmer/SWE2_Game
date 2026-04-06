@@ -19,6 +19,8 @@ import java.util.List;
  * kann.
  */
 public abstract class BaseMachine {
+   protected static final int DEFAULT_MAX_OUTPUT = 5;
+
    protected final Tile tile;
    protected ProductionStrategy strategy;
    protected final String name;
@@ -43,6 +45,9 @@ public abstract class BaseMachine {
    public void tick() {
       tile.getLock().lock();
       try {
+         if (isOutputFull()) {
+            return;
+         }
          strategy.produce(this);
       } finally {
          tile.getLock().unlock();
@@ -90,6 +95,10 @@ public abstract class BaseMachine {
     * oder falscher Typ.
     */
    public boolean tryInsertInput(ItemStack item) {
+      if (isOutputFull()) {
+         return false;
+      }
+
       if (inputBuffer == null) {
          inputBuffer = item;
          return true;
@@ -154,6 +163,11 @@ public abstract class BaseMachine {
    /** Prüft ob der Output-Buffer leer ist. */
    public boolean hasOutput() {
       return outputBuffer != null && outputBuffer.getAmount() > 0;
+   }
+
+   /** Prüft ob der Output-Buffer sein Standard-Limit erreicht hat. */
+   public boolean isOutputFull() {
+      return hasOutput() && outputBuffer.getAmount() >= DEFAULT_MAX_OUTPUT;
    }
 
    /** Prüft ob der Input-Buffer leer ist. */

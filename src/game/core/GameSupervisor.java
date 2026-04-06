@@ -2,7 +2,6 @@ package game.core;
 
 import game.logistics.ConveyorBelt;
 import game.logistics.LogisticsThread;
-import game.logistics.TransportRobot;
 import game.machine.Direction;
 import game.machine.BaseMachine;
 import game.world.Tile;
@@ -23,18 +22,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * periodischen Task.
  * 2. logisticsExecutor (SingleThreadExecutor): Globaler Thread für
  * Fließband-Logik.
- * 3. robotExecutor (CachedThreadPool): Jeder TransportRobot ist ein eigener
- * Thread.
- * 4. collisionHandler (dedizierter Thread): Prüft auf Roboter-Kollisionen.
  */
 public class GameSupervisor {
-   private final ScheduledExecutorService machineExecutor;
-   private final ExecutorService logisticsExecutor;
-   private final ExecutorService robotExecutor;
-   private final CollisionHandler collisionHandler;
+   private ScheduledExecutorService machineExecutor;
+   private ExecutorService logisticsExecutor;
    private final List<BaseMachine> machines;
    private final List<ConveyorBelt> belts;
-   private final List<TransportRobot> robots;
    private final WorldMap map;
    private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -44,31 +37,25 @@ public class GameSupervisor {
    private final Map<String, ConveyorBelt> beltIndex = new ConcurrentHashMap<>();
 
    public GameSupervisor(WorldMap map, List<BaseMachine> machines,
-         List<ConveyorBelt> belts, List<TransportRobot> robots) {
+         List<ConveyorBelt> belts) {
       this.map = map;
       this.machines = new CopyOnWriteArrayList<>(machines);
       this.belts = new CopyOnWriteArrayList<>(belts);
-      this.robots = new CopyOnWriteArrayList<>(robots);
-      this.machineExecutor = Executors.newScheduledThreadPool(
-            Runtime.getRuntime().availableProcessors());
-      this.logisticsExecutor = Executors.newSingleThreadExecutor(r -> {
-         Thread t = new Thread(r, "Logistics-Thread");
-         t.setDaemon(true);
-         return t;
-      });
-      this.robotExecutor = Executors.newCachedThreadPool(r -> {
-         Thread t = new Thread(r, "Robot-" + System.nanoTime());
-         t.setDaemon(true);
-         return t;
-      });
-      this.collisionHandler = new CollisionHandler(this.robots);
+      initializeExecutors();
 
       for (ConveyorBelt belt : this.belts) {
          beltIndex.put(beltKey(belt.getX(), belt.getY()), belt);
       }
    }
 
-   public void start() {
+   public synchronized void start() {
+      if (running.get()) {
+         return;
+      }
+
+      ensureExecutorsRunning();
+
+      machineFutures.clear();
       running.set(true);
 
       // Starte Maschinen (Producer) als periodische Tasks
@@ -86,16 +73,8 @@ public class GameSupervisor {
       // Starte Logistik-Thread für Fließbänder
       logisticsExecutor.submit(new LogisticsThread(map, belts, running));
 
-      // Starte Transport-Roboter als eigene Threads
-      for (TransportRobot robot : robots) {
-         robotExecutor.submit(robot);
-      }
-
-      // Starte Kollisionsüberwachung
-      collisionHandler.start(running);
-
       System.out.println("[GameSupervisor] Alle Threads gestartet. Maschinen: "
-            + machines.size() + " Belts: " + belts.size() + " Robots: " + robots.size());
+            + machines.size() + " Belts: " + belts.size());
    }
 
    /**
@@ -107,6 +86,7 @@ public class GameSupervisor {
          machines.add(machine);
       }
       if (running.get()) {
+         ensureExecutorsRunning();
          ScheduledFuture<?> future = machineExecutor.scheduleAtFixedRate(() -> {
             try {
                machine.tick();
@@ -169,15 +149,6 @@ public class GameSupervisor {
       System.out.println("[GameSupervisor] Belt abgemeldet bei (" + x + "," + y + ")");
    }
 
-   public void rotateBelt(int x, int y) {
-      ConveyorBelt belt = beltIndex.get(beltKey(x, y));
-      if (belt == null) {
-         return;
-      }
-      belt.rotateClockwise();
-      System.out.println("[GameSupervisor] Belt rotiert bei (" + x + "," + y + ") -> " + belt.getDirection());
-   }
-
    public void registerRobot(TransportRobot robot) {
       if (!robots.contains(robot)) {
          robots.add(robot);
@@ -194,21 +165,35 @@ public class GameSupervisor {
    /**
     * Sicheres Herunterfahren aller Threads.
     */
-   public void stop() {
+   public synchronized void stop() {
       running.set(false);
       machineExecutor.shutdownNow();
       logisticsExecutor.shutdownNow();
-      robotExecutor.shutdownNow();
-      collisionHandler.stop();
 
       try {
          machineExecutor.awaitTermination(2, TimeUnit.SECONDS);
          logisticsExecutor.awaitTermination(2, TimeUnit.SECONDS);
-         robotExecutor.awaitTermination(2, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
          Thread.currentThread().interrupt();
       }
       System.out.println("[GameSupervisor] Alle Threads gestoppt.");
+   }
+
+   private void initializeExecutors() {
+      this.machineExecutor = Executors.newScheduledThreadPool(
+            Runtime.getRuntime().availableProcessors());
+      this.logisticsExecutor = Executors.newSingleThreadExecutor(r -> {
+         Thread t = new Thread(r, "Logistics-Thread");
+         t.setDaemon(true);
+         return t;
+      });
+   }
+
+   private void ensureExecutorsRunning() {
+      if (machineExecutor == null || machineExecutor.isShutdown() || machineExecutor.isTerminated()
+            || logisticsExecutor == null || logisticsExecutor.isShutdown() || logisticsExecutor.isTerminated()) {
+         initializeExecutors();
+      }
    }
 
    public AtomicBoolean getRunning() {
@@ -217,10 +202,6 @@ public class GameSupervisor {
 
    public List<BaseMachine> getMachines() {
       return Collections.unmodifiableList(machines);
-   }
-
-   public List<TransportRobot> getRobots() {
-      return Collections.unmodifiableList(robots);
    }
 
    public List<ConveyorBelt> getBelts() {

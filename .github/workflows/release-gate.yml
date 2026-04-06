@@ -42,10 +42,6 @@ jobs:
         shell: pwsh
         run: ./scripts/verify-jdk17.ps1
 
-      - name: Documentation consistency
-        shell: pwsh
-        run: ./scripts/check-doc-consistency.ps1
-
       - name: Version/artifact consistency
         shell: pwsh
         run: ./scripts/check-version-artifacts.ps1

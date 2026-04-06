@@ -11,7 +11,7 @@ import game.world.WorldMap;
  *
  * Der Greifer hat eine Richtung (source → destination) und arbeitet wie folgt:
  * - Nimmt Items vom Output-Buffer einer Maschine auf dem Quell-Tile
- * ODER von einem Foerderband-Item am Quell-Tile
+ * ODER vom Boden des Quell-Tiles
  * - Legt sie in den Input-Buffer einer Maschine auf dem Ziel-Tile
  * ODER auf ein Foerderband-Zieltile
  * - Verbraucht Kohle aus seinem eigenen Input-Buffer als Brennstoff
@@ -162,8 +162,8 @@ public class Grabber extends BaseMachine {
          }
       }
 
-      // Prioritaet 2: Item vom Foerderband
-      if (srcTile.isConveyorBelt() && srcTile.hasItem()) {
+      // Priorität 2: Item auf dem Boden
+      if (srcTile.hasItem()) {
          ItemStack ground = srcTile.getItemOnGround();
          ItemType type = ground.getType();
          ground.remove(1);
@@ -186,13 +186,15 @@ public class Grabber extends BaseMachine {
          return tryInsertInputFromSideCompat(dstTile.getMachine(), item, incomingSide);
       }
 
-      // Prioritaet 2: Auf Foerderband legen
-      if (!dstTile.isConveyorBelt()) {
-         return false;
-      }
-
+      // Priorität 2: Auf den Boden legen
       if (!dstTile.hasItem()) {
          dstTile.setItemOnGround(item);
+         return true;
+      }
+
+      // Auf bestehenden Stack addieren
+      if (dstTile.getItemOnGround().getType() == item.getType()) {
+         dstTile.getItemOnGround().add(item.getAmount());
          return true;
       }
 
@@ -218,56 +220,10 @@ public class Grabber extends BaseMachine {
 
       if (srcTile.hasMachine() && !srcTile.getMachine().hasOutput()) {
          srcTile.getMachine().setOutputBuffer(item);
-         return;
-      }
-
-      if (!srcTile.hasMachine() && srcTile.isConveyorBelt()) {
-         if (!srcTile.hasItem()) {
-            srcTile.setItemOnGround(item);
-            return;
-         }
-         if (srcTile.getItemOnGround().getType() == item.getType()) {
-            return;
-         }
-      }
-
-      throw new IllegalStateException("Failed to return item to source tile: " + item);
-   }
-
-   /**
-    * Kompatibilitäts-Helfer: side-aware Output-Extraction falls vorhanden,
-    * ansonsten permissiver Fallback.
-    */
-   private boolean canExtractOutputFromSideCompat(BaseMachine machine, Direction extractionSide) {
-      try {
-         java.lang.reflect.Method method = machine.getClass().getMethod(
-               "canExtractOutputFromSide", Direction.class);
-         Object result = method.invoke(machine, extractionSide);
-         if (result instanceof Boolean) {
-            return (Boolean) result;
-         }
-         return true;
-      } catch (NoSuchMethodException ignored) {
-         return true;
-      } catch (ReflectiveOperationException e) {
-         return false;
-      }
-   }
-
-   /**
-    * Kompatibilitäts-Helfer: side-aware Input falls vorhanden,
-    * sonst normaler tryInsertInput-Fallback.
-    */
-   private boolean tryInsertInputFromSideCompat(BaseMachine machine, ItemStack item, Direction incomingSide) {
-      try {
-         java.lang.reflect.Method method = machine.getClass().getMethod(
-               "tryInsertInputFromSide", ItemStack.class, Direction.class);
-         Object result = method.invoke(machine, item, incomingSide);
-         return result instanceof Boolean && (Boolean) result;
-      } catch (NoSuchMethodException ignored) {
-         return machine.tryInsertInput(item);
-      } catch (ReflectiveOperationException e) {
-         return false;
+      } else if (srcTile.hasItem()) {
+         srcTile.getItemOnGround().add(item.getAmount());
+      } else {
+         srcTile.setItemOnGround(item);
       }
    }
 

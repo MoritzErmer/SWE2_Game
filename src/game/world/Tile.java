@@ -64,16 +64,31 @@ public class Tile {
    }
 
    /**
+    * Prüft ob ein Boden-Item auf diesem Tile erlaubt ist.
+    */
+   public boolean canAcceptGroundItem() {
+      return machine == null && itemOnGround == null;
+   }
+
+   /**
+    * Prüft ob auf diesem Tile eine Maschine platziert werden darf.
+    */
+   public boolean canPlaceMachine() {
+      return machine == null && itemOnGround == null;
+   }
+
+   /**
+    * Gibt true zurück wenn das Tile ein Förderband ist.
+    */
+   public boolean isConveyorBelt() {
+      return type == TileType.CONVEYOR_BELT;
+   }
+
+   /**
     * Legt ein Item auf das Tile. Thread-sicher nur innerhalb eines lock()-Blocks
     * aufrufen!
     */
    public void setItemOnGround(ItemStack item) {
-      if (item != null && !isConveyorBelt()) {
-         return;
-      }
-      if (item != null && machine != null) {
-         return;
-      }
       this.itemOnGround = item;
    }
 
@@ -89,17 +104,9 @@ public class Tile {
    }
 
    public void setMachine(BaseMachine machine) {
-      lock.lock();
-      try {
-         if (machine != null && itemOnGround != null) {
-            throw new IllegalStateException("Cannot place machine on tile that already contains an item.");
-         }
-         this.machine = machine;
-         if (machine != null) {
-            this.type = TileType.MACHINE;
-         }
-      } finally {
-         lock.unlock();
+      this.machine = machine;
+      if (machine != null) {
+         this.type = TileType.MACHINE;
       }
    }
 

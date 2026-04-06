@@ -295,10 +295,16 @@ public class GameUI extends JFrame {
          showHudMessage("Speichern nicht verfuegbar");
          return;
       }
+
       // Run off EDT so we don't block the UI thread during file I/O
       new Thread(() -> {
-         SaveManager.save(supervisor, map, player, machineList, beltList, gameMode);
-         SwingUtilities.invokeLater(() -> showHudMessage("Gespeichert!"));
+         try {
+            SaveManager.save(supervisor, map, player, machineList, beltList, gameMode);
+            SwingUtilities.invokeLater(() -> showHudMessage("Gespeichert!"));
+         } catch (RuntimeException e) {
+            SwingUtilities.invokeLater(() -> showHudMessage("Speichern fehlgeschlagen"));
+            e.printStackTrace();
+         }
       }, "save-thread").start();
    }
 
@@ -626,12 +632,6 @@ public class GameUI extends JFrame {
             return;
 
          ItemType type = selected.getType();
-         boolean placingMachine = type == ItemType.MINER_KIT
-               || type == ItemType.SMELTER_KIT
-               || type == ItemType.GRABBER_KIT
-               || type == ItemType.FORGE_KIT;
-            if (placingMachine && !canPlaceMachineOnTile(tile))
-            return;
 
          // Miner platzieren (nur auf Ressourcen-Tile)
          if (type == ItemType.MINER_KIT) {
@@ -812,7 +812,7 @@ public class GameUI extends JFrame {
       Tile tile = map.getTile(player.getX(), player.getY());
       tile.getLock().lock();
       try {
-         if (tile.hasMachine())
+         if (!tile.canPlaceMachine())
             return;
          BaseMachine machine;
          if ("miner".equals(type) && tile.isResourceDeposit()) {
@@ -1069,7 +1069,7 @@ public class GameUI extends JFrame {
 
          // Controls hint
          g2.setColor(new Color(150, 150, 150));
-         g2.drawString("[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar",
+         g2.drawString("[WASD]Move [E]Inv [C]Craft [Ctrl+S]Save [Enter]Mine [1-9]Hotbar [R]Rotate [Q]Deconstruct [Left]Place [Right]Interact",
                176 + modeOffset, hudY + 14);
 
          // HUD notification (save/load feedback, fades after 3 seconds)
@@ -1081,7 +1081,7 @@ public class GameUI extends JFrame {
                g2.setColor(new Color(100, 255, 120, alpha));
                FontMetrics fm = g2.getFontMetrics();
                int msgX = (getWidth() - fm.stringWidth(hudMessage)) / 2;
-               g2.drawString(hudMessage, msgX, hudY - 8);
+               g2.drawString(hudMessage, msgX, hudY - 60);
             } else {
                hudMessage = null;
             }

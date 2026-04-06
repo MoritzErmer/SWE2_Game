@@ -52,6 +52,9 @@
                 <version>3.2.5</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                    <!-- Headless mode ensures tests with AWT/Swing classes
+                         compile and run in CI environments without a display. -->
+                    <argLine>-Djava.awt.headless=true</argLine>
                 </configuration>
             </plugin>
 
