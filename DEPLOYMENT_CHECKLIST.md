@@ -11,7 +11,6 @@ Diese Checkliste ist das finale Release-Gate vor Abgabe/Distribution.
 
 ## 2. Konsistenzchecks
 
-- [ ] `./scripts/check-doc-consistency.ps1` erfolgreich.
 - [ ] `./scripts/check-version-artifacts.ps1` erfolgreich.
 - [ ] Traceability in [REQUIREMENTS_TRACEABILITY.md](REQUIREMENTS_TRACEABILITY.md) ist aktuell.
 

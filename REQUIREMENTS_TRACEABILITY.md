@@ -8,7 +8,7 @@ Diese Matrix verknuepft die Anforderungen und Bewertungspunkte aus [Aufgabenstel
 |---|---|---|---|---|
 | Punkte 5 | Originalitaet und Umfang | [src/game/Main.java](src/game/Main.java), [src/game/ui/GameUI.java](src/game/ui/GameUI.java), [src/game/machine/Grabber.java](src/game/machine/Grabber.java) | Manuelle Demo | [docs/typst/main.typ](docs/typst/main.typ#L21) |
 | Punkte 10 | Spielregeln, Muster, Softwareaspekte | [src/game/ui/GameUI.java](src/game/ui/GameUI.java), [src/game/crafting/CraftingManager.java](src/game/crafting/CraftingManager.java), [src/game/machine/ProductionStrategy.java](src/game/machine/ProductionStrategy.java) | Manual Gameplay Checklist | [docs/typst/main.typ](docs/typst/main.typ#L27), [docs/typst/main.typ](docs/typst/main.typ#L100) |
-| Punkte 10 | Multithreading-Eigenschaften | [src/game/core/GameSupervisor.java](src/game/core/GameSupervisor.java), [src/game/core/CollisionHandler.java](src/game/core/CollisionHandler.java), [src/game/logistics/LogisticsThread.java](src/game/logistics/LogisticsThread.java), [src/game/logistics/TransportRobot.java](src/game/logistics/TransportRobot.java) | [src/test/java/game/integration/SupervisorLifecycleE2ETest.java](src/test/java/game/integration/SupervisorLifecycleE2ETest.java) | [docs/typst/main.typ](docs/typst/main.typ#L52) |
+| Punkte 10 | Multithreading-Eigenschaften | [src/game/core/GameSupervisor.java](src/game/core/GameSupervisor.java), [src/game/logistics/LogisticsThread.java](src/game/logistics/LogisticsThread.java) | [src/test/java/game/integration/SupervisorLifecycleE2ETest.java](src/test/java/game/integration/SupervisorLifecycleE2ETest.java) | [docs/typst/main.typ](docs/typst/main.typ#L52) |
 | Punkte 10 | Konsistente, verifizierbare Requirements | [pom.xml](pom.xml), [src/game](src/game) | Unit + Integrationstests | [docs/typst/main.typ](docs/typst/main.typ#L81), [docs/typst/main.typ](docs/typst/main.typ#L82) |
 | Punkte 10 | Verlaesslichkeit beantwortet | Laufzeitarchitektur in [src/game/core/GameSupervisor.java](src/game/core/GameSupervisor.java) und Tile-Locking in [src/game/world/WorldMap.java](src/game/world/WorldMap.java) | Geplante Reliability-Messung | [docs/typst/main.typ](docs/typst/main.typ#L114) |
 | Punkte 10 | Quellcode Java/C++ und spielbar | [src/game/Main.java](src/game/Main.java), [src/game/ui/GameUI.java](src/game/ui/GameUI.java) | Build und Start | [docs/typst/main.typ](docs/typst/main.typ#L177) |
@@ -25,7 +25,7 @@ Diese Matrix verknuepft die Anforderungen und Bewertungspunkte aus [Aufgabenstel
 | F-04 | [src/game/crafting/CraftingManager.java](src/game/crafting/CraftingManager.java) | [src/test/java/game/crafting/CraftingManagerTest.java](src/test/java/game/crafting/CraftingManagerTest.java) | [docs/typst/main.typ](docs/typst/main.typ#L81) |
 | F-05 | [src/game/ui/GameUI.java](src/game/ui/GameUI.java), [src/game/machine](src/game/machine) | Manuelle Platzierungs-/Abbau-Tests | [docs/typst/main.typ](docs/typst/main.typ#L81) |
 | F-06 | [src/game/core/GameSupervisor.java](src/game/core/GameSupervisor.java), [src/game/logistics/LogisticsThread.java](src/game/logistics/LogisticsThread.java) | [src/test/java/game/world/WorldMapTest.java](src/test/java/game/world/WorldMapTest.java) | [docs/typst/main.typ](docs/typst/main.typ#L81) |
-| F-07 | [src/game/core/GameSupervisor.java](src/game/core/GameSupervisor.java), [src/game/core/CollisionHandler.java](src/game/core/CollisionHandler.java) | [src/test/java/game/integration/SupervisorLifecycleE2ETest.java](src/test/java/game/integration/SupervisorLifecycleE2ETest.java) | [docs/typst/main.typ](docs/typst/main.typ#L81) |
+| F-07 | [src/game/core/GameSupervisor.java](src/game/core/GameSupervisor.java) | [src/test/java/game/integration/SupervisorLifecycleE2ETest.java](src/test/java/game/integration/SupervisorLifecycleE2ETest.java) | [docs/typst/main.typ](docs/typst/main.typ#L81) |
 | F-08 | [src/game/world/Tile.java](src/game/world/Tile.java), [src/game/world/WorldMap.java](src/game/world/WorldMap.java) | [src/test/java/game/world/WorldMapTest.java](src/test/java/game/world/WorldMapTest.java) | [docs/typst/main.typ](docs/typst/main.typ#L81) |
 | F-09 | [pom.xml](pom.xml), [src/game/Main.java](src/game/Main.java) | Buildlauf und Starttest | [docs/typst/main.typ](docs/typst/main.typ#L81) |
 | F-10 | [scripts/package-exe.ps1](scripts/package-exe.ps1), [scripts/verify-jdk17.ps1](scripts/verify-jdk17.ps1) | Packaging-Lauf | [docs/typst/main.typ](docs/typst/main.typ#L81) |
@@ -47,7 +47,6 @@ Bei jeder funktionalen Aenderung sind diese Updates verpflichtend:
 2. Testanpassung in [src/test/java/game](src/test/java/game).
 3. Dokuanpassung in [docs/typst/main.typ](docs/typst/main.typ).
 4. Traceability-Update in [REQUIREMENTS_TRACEABILITY.md](REQUIREMENTS_TRACEABILITY.md).
-5. Konsistenzcheck ueber [scripts/check-doc-consistency.ps1](scripts/check-doc-consistency.ps1).
 
 ## E. Definition of Done (DoD)
 
@@ -56,4 +55,4 @@ Eine Aenderung gilt nur dann als abgeschlossen, wenn:
 1. Build/Test erfolgreich sind.
 2. Doku die geaenderte Funktion und den Requirementbezug enthaelt.
 3. Die Matrix den Nachweislink auf Code plus Test plus Doku enthaelt.
-4. Der Konsistenzcheck ohne Fehler durchlaeuft.
+4. Die Version-/Artefakt-Pruefung ohne Fehler durchlaeuft.
