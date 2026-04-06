@@ -42,6 +42,7 @@ public class SaveManager {
     public static void save(GameSupervisor supervisor, WorldMap world,
                             PlayerCharacter player, List<BaseMachine> machines,
                             List<ConveyorBelt> belts, GameMode mode) {
+        boolean restartAfterSave = supervisor.getRunning().get();
         supervisor.stop();
         try {
             GameSaveState state = buildState(world, player, machines, belts, mode);
@@ -52,7 +53,13 @@ public class SaveManager {
         } catch (IOException e) {
             LOG.warning("Failed to save game: " + e.getMessage());
         } finally {
-            supervisor.start();
+            if (restartAfterSave) {
+                try {
+                    supervisor.start();
+                } catch (RuntimeException e) {
+                    LOG.severe("Failed to restart supervisor after save: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -112,7 +119,10 @@ public class SaveManager {
 
         // Machines — position is derived by scanning the world for the machine's tile
         state.machines = new ArrayList<>();
-        for (BaseMachine m : machines) {
+        List<BaseMachine> machinesToSave = (machines != null && !machines.isEmpty())
+            ? machines
+            : collectMachinesFromWorld(world);
+        for (BaseMachine m : machinesToSave) {
             int[] pos = findTilePosition(world, m.getTile());
             if (pos == null) continue; // Orphaned machine, skip
             GameSaveState.MachineData md = new GameSaveState.MachineData();
@@ -120,6 +130,7 @@ public class SaveManager {
             md.x = pos[0];
             md.y = pos[1];
             md.direction = m.getDirection().name();
+            md.baseTileType = m.getTile().getOriginalType().name();
             if (m.getInputBuffer() != null) {
                 md.inputBuffer = toItemStackData(m.getInputBuffer());
             }
@@ -131,15 +142,44 @@ public class SaveManager {
 
         // Belts
         state.belts = new ArrayList<>();
-        for (ConveyorBelt b : belts) {
-            GameSaveState.BeltData bd = new GameSaveState.BeltData();
-            bd.x = b.getX();
-            bd.y = b.getY();
-            bd.direction = b.getDirection().name();
-            state.belts.add(bd);
+        if (belts != null && !belts.isEmpty()) {
+            for (ConveyorBelt b : belts) {
+                GameSaveState.BeltData bd = new GameSaveState.BeltData();
+                bd.x = b.getX();
+                bd.y = b.getY();
+                bd.direction = b.getDirection().name();
+                state.belts.add(bd);
+            }
+        } else {
+            // Fallback for callers that do not track belt objects: store conveyor tile positions.
+            for (int x = 0; x < world.getWidth(); x++) {
+                for (int y = 0; y < world.getHeight(); y++) {
+                    Tile tile = world.getTile(x, y);
+                    if (tile.getType() == TileType.CONVEYOR_BELT) {
+                        GameSaveState.BeltData bd = new GameSaveState.BeltData();
+                        bd.x = x;
+                        bd.y = y;
+                        bd.direction = ConveyorBelt.Direction.RIGHT.name();
+                        state.belts.add(bd);
+                    }
+                }
+            }
         }
 
         return state;
+    }
+
+    private static List<BaseMachine> collectMachinesFromWorld(WorldMap world) {
+        List<BaseMachine> fallbackMachines = new ArrayList<>();
+        for (int x = 0; x < world.getWidth(); x++) {
+            for (int y = 0; y < world.getHeight(); y++) {
+                Tile tile = world.getTile(x, y);
+                if (tile.hasMachine()) {
+                    fallbackMachines.add(tile.getMachine());
+                }
+            }
+        }
+        return fallbackMachines;
     }
 
     /** Scans the world grid for a tile by identity and returns its [x, y] or null. */
