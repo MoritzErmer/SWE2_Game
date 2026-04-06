@@ -57,6 +57,46 @@ public class WorldMap {
       return grid[x][y];
    }
 
+   public int[] findRandomAreaOrigin(int areaWidth, int areaHeight, Random rng) {
+      if (areaWidth <= 0 || areaHeight <= 0) {
+         throw new IllegalArgumentException("Area size must be positive.");
+      }
+      if (areaWidth > width || areaHeight > height) {
+         throw new IllegalArgumentException("Area does not fit within map bounds.");
+      }
+
+      Random effectiveRng = rng != null ? rng : new Random();
+      int x = effectiveRng.nextInt(width - areaWidth + 1);
+      int y = effectiveRng.nextInt(height - areaHeight + 1);
+      return new int[] { x, y };
+   }
+
+   public void setAreaType(int originX, int originY, int areaWidth, int areaHeight, TileType type) {
+      if (type == null) {
+         throw new IllegalArgumentException("Tile type must not be null.");
+      }
+      if (!inBounds(originX, originY)
+            || !inBounds(originX + areaWidth - 1, originY + areaHeight - 1)) {
+         throw new IllegalArgumentException("Area is out of bounds.");
+      }
+
+      for (int x = originX; x < originX + areaWidth; x++) {
+         for (int y = originY; y < originY + areaHeight; y++) {
+            Tile tile = grid[x][y];
+            tile.getLock().lock();
+            try {
+               if (tile.hasMachine()) {
+                  tile.removeMachine();
+               }
+               tile.setItemOnGround(null);
+               tile.setType(type);
+            } finally {
+               tile.getLock().unlock();
+            }
+         }
+      }
+   }
+
    public boolean inBounds(int x, int y) {
       return x >= 0 && y >= 0 && x < width && y < height;
    }

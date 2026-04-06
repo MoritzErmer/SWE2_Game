@@ -71,6 +71,9 @@ public class Tile {
       if (item != null && !isConveyorBelt()) {
          return;
       }
+      if (item != null && isRocketTile()) {
+         return;
+      }
       if (item != null && machine != null) {
          return;
       }
@@ -91,6 +94,9 @@ public class Tile {
    public void setMachine(BaseMachine machine) {
       lock.lock();
       try {
+         if (machine != null && isRocketTile()) {
+            throw new IllegalStateException("Cannot place machine on rocket tile.");
+         }
          if (machine != null && itemOnGround != null) {
             throw new IllegalStateException("Cannot place machine on tile that already contains an item.");
          }
@@ -122,7 +128,7 @@ public class Tile {
 
    /** Boden-Items sind nur auf Förderbändern erlaubt. */
    public boolean canAcceptGroundItem() {
-      return isConveyorBelt() && machine == null && itemOnGround == null;
+      return isConveyorBelt() && !isRocketTile() && machine == null && itemOnGround == null;
    }
 
    public boolean isConveyorBelt() {
@@ -133,7 +139,12 @@ public class Tile {
    public boolean canPlaceMachine() {
       return machine == null
             && itemOnGround == null
+            && !isRocketTile()
             && (type == TileType.EMPTY || isResourceDeposit());
+   }
+
+   public boolean isRocketTile() {
+      return type == TileType.ROCKET;
    }
 
    public boolean isEmpty() {

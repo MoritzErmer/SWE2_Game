@@ -9,6 +9,7 @@ import game.machine.BaseMachine;
 import game.machine.Grabber;
 import game.machine.Miner;
 import game.machine.Smelter;
+import game.objective.RocketObjective;
 import game.save.GameSaveState;
 import game.ui.GameUI;
 import game.ui.MainMenuUI;
@@ -23,6 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -62,14 +64,26 @@ public class Main {
       // --- Maschinen, Belts (initial leer, werden im Spiel platziert) ---
       List<BaseMachine> machines = new CopyOnWriteArrayList<>();
       List<ConveyorBelt> belts = new CopyOnWriteArrayList<>();
+      RocketObjective rocketObjective;
+      long initialElapsedPlayTimeMs = 0L;
+      boolean gameAlreadyEnded = false;
 
       if (saveState.isPresent()) {
-         restoreFromSave(saveState.get(), map, player, machines, belts);
+         GameSaveState state = saveState.get();
+         restoreFromSave(state, map, player, machines, belts);
+         rocketObjective = restoreRocketObjective(state, map, machines, belts);
+         initialElapsedPlayTimeMs = Math.max(0L, state.elapsedPlayTimeMs);
+         gameAlreadyEnded = state.gameEnded || rocketObjective.getStatus() == RocketObjective.Status.ENDED;
          System.out.println("[Main] Spielstand geladen.");
       } else {
          map.generateResources(0.15); // 15% der Tiles sind Ressourcen
          addStarterInventory(player);
+         rocketObjective = createNewRocketObjective(map);
       }
+
+      final RocketObjective finalRocketObjective = rocketObjective;
+      final long finalInitialElapsedPlayTimeMs = initialElapsedPlayTimeMs;
+      final boolean finalGameAlreadyEnded = gameAlreadyEnded;
 
       // --- Game Supervisor erstellen ---
       GameSupervisor supervisor = new GameSupervisor(map, machines, belts);
@@ -78,6 +92,7 @@ public class Main {
       SwingUtilities.invokeLater(() -> {
          GameUI ui = new GameUI(map, player, gameMode);
          ui.setSaveContext(supervisor, supervisor.getMachines(), supervisor.getBelts());
+         ui.setRocketContext(finalRocketObjective, finalInitialElapsedPlayTimeMs, finalGameAlreadyEnded);
 
          // Creative mode is applied to CraftingManager in the GameUI constructor.
 
@@ -127,6 +142,81 @@ public class Main {
       player.addItem(ItemType.GRABBER_KIT, 10);
       player.addItem(ItemType.FORGE_KIT, 10);
       player.addItem(ItemType.CONVEYOR_BELT_ITEM, 50);
+   }
+
+   private static RocketObjective createNewRocketObjective(WorldMap map) {
+      int[] origin = map.findRandomAreaOrigin(RocketObjective.WIDTH, RocketObjective.HEIGHT, new Random());
+      RocketObjective objective = new RocketObjective(origin[0], origin[1]);
+      applyRocketObjectiveToMap(map, objective, null, null);
+      return objective;
+   }
+
+   private static RocketObjective restoreRocketObjective(GameSaveState state, WorldMap map,
+         List<BaseMachine> machines, List<ConveyorBelt> belts) {
+      if (state == null || state.rocketX == null || state.rocketY == null) {
+         return createNewRocketObjective(map);
+      }
+
+      int maxX = Math.max(0, map.getWidth() - RocketObjective.WIDTH);
+      int maxY = Math.max(0, map.getHeight() - RocketObjective.HEIGHT);
+      int originX = clamp(state.rocketX, 0, maxX);
+      int originY = clamp(state.rocketY, 0, maxY);
+
+      RocketObjective objective = new RocketObjective(
+            originX,
+            originY,
+            state.rocketIronGearsDelivered,
+            state.rocketCopperPlatesDelivered,
+            state.rocketConveyorBeltsDelivered,
+            RocketObjective.Status.fromRaw(state.rocketStatus),
+            state.rocketLaunchStartedAtElapsedMs);
+
+      applyRocketObjectiveToMap(map, objective, machines, belts);
+      return objective;
+   }
+
+   private static void applyRocketObjectiveToMap(WorldMap map, RocketObjective objective,
+         List<BaseMachine> machines, List<ConveyorBelt> belts) {
+      if (objective == null) {
+         return;
+      }
+
+      int originX = objective.getOriginX();
+      int originY = objective.getOriginY();
+
+      for (int x = originX; x < originX + objective.getWidth(); x++) {
+         for (int y = originY; y < originY + objective.getHeight(); y++) {
+            if (!map.inBounds(x, y)) {
+               continue;
+            }
+
+            Tile tile = map.getTile(x, y);
+            tile.getLock().lock();
+            try {
+               if (tile.hasMachine() && machines != null) {
+                  machines.remove(tile.getMachine());
+                  tile.removeMachine();
+               }
+               if (belts != null && tile.getType() == TileType.CONVEYOR_BELT) {
+                  final int beltX = x;
+                  final int beltY = y;
+                  belts.removeIf(b -> b.getX() == beltX && b.getY() == beltY);
+               }
+               tile.setItemOnGround(null);
+            } finally {
+               tile.getLock().unlock();
+            }
+         }
+      }
+
+      map.setAreaType(originX, originY, objective.getWidth(), objective.getHeight(), TileType.ROCKET);
+   }
+
+   private static int clamp(int value, int min, int max) {
+      if (max < min) {
+         return min;
+      }
+      return Math.max(min, Math.min(value, max));
    }
 
    private static void restoreFromSave(GameSaveState state, WorldMap map, PlayerCharacter player,

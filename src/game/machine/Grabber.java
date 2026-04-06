@@ -121,6 +121,11 @@ public class Grabber extends BaseMachine {
       if (!hasFuel())
          return;
 
+      // Rocket objective is fed manually only.
+      if (dstTile.isRocketTile()) {
+         return;
+      }
+
       // Ohne Maschinenziel darf nur auf ein freies Förderband geliefert werden.
       if (!dstTile.hasMachine() && (!dstTile.isConveyorBelt() || dstTile.hasItem()))
          return;

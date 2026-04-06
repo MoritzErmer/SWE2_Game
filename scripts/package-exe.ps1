@@ -40,7 +40,7 @@ function Assert-WixInstalled {
     $inDefaultDir = Get-ChildItem "C:\Program Files (x86)\WiX Toolset*\bin\candle.exe" `
                         -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $inPath -and -not $inDefaultDir) {
-        throw "WiX Toolset 3.x nicht gefunden. jpackage benoetigt WiX fuer den Typ 'exe'.`nDownload: https://wixtoolset.org/releases/ — danach PATH aktualisieren."
+        throw "WiX Toolset 3.x nicht gefunden. jpackage benötigt WiX fuer den Typ 'exe'.`nDownload: https://wixtoolset.org/releases/ — danach PATH aktualisieren."
     }
 }
 

@@ -3,12 +3,21 @@ package game.save;
 import java.util.List;
 
 public class GameSaveState {
-    public int saveVersion = 1;
+    public int saveVersion = 2;
     public String gameMode = "NORMAL";
     public PlayerData player;
     public List<TileData> modifiedTiles;
     public List<MachineData> machines;
     public List<BeltData> belts;
+    public Integer rocketX;
+    public Integer rocketY;
+    public int rocketIronGearsDelivered;
+    public int rocketCopperPlatesDelivered;
+    public int rocketConveyorBeltsDelivered;
+    public String rocketStatus = "ACTIVE";
+    public long rocketLaunchStartedAtElapsedMs = -1L;
+    public long elapsedPlayTimeMs = 0L;
+    public boolean gameEnded = false;
 
     public static class PlayerData {
         public int x, y, health, maxHealth, selectedSlot;

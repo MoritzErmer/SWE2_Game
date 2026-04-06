@@ -6,7 +6,7 @@ import game.world.Tile;
 
 /**
  * Miner: Baut Erz von einem Ressourcen-Vorkommen ab.
- * Nutzt MiningStrategy als Produktionsstrategie und benoetigt Kohle als
+ * Nutzt MiningStrategy als Produktionsstrategie und benötigt Kohle als
  * Brennstoff.
  */
 public class Miner extends BaseMachine {
