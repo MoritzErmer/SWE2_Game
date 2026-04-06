@@ -29,7 +29,7 @@ public class MiningStrategy implements ProductionStrategy {
       if (produced == null)
          return;
 
-      // Miner benoetigt Kohle als Brennstoff. Auf Kohle-Vorkommen kann er sich
+      // Miner benötigt Kohle als Brennstoff. Auf Kohle-Vorkommen kann er sich
       // bei Bedarf selbst versorgen.
       if (machine instanceof Miner) {
          Miner miner = (Miner) machine;

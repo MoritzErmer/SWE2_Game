@@ -4,9 +4,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 import game.machine.Direction;
+import game.objective.RocketObjective;
 
 /**
  * Generiert 8x8 Pixel-Art-Texturen für alle Tile-Typen, Maschinen, Items und
@@ -39,6 +39,7 @@ public class PixelTextures {
       cache.put("copper_deposit", generateCopperDeposit());
       cache.put("coal_deposit", generateCoalDeposit());
       cache.put("conveyor_belt", generateConveyorBelt());
+      cache.put("rocket_pad", generateRocketPad());
       cache.put("machine_bg", generateMachineBg());
       cache.put("miner", generateMinerDirectional());
       cache.put("smelter", generateSmelterDirectional());
@@ -62,6 +63,7 @@ public class PixelTextures {
       generateSmelterFrames();
       generateForgeFrames();
       generateGrabberFrames();
+      generateRocketFrames();
    }
 
    private void generateConveyorBeltFrames() {
@@ -262,6 +264,161 @@ public class PixelTextures {
       cache.put("grabber_f1", buildFromPalette(f1, pal));
       cache.put("grabber_f2", buildFromPalette(f2, pal));
       cache.put("grabber_f3", buildFromPalette(f3, pal));
+   }
+
+   private BufferedImage generateRocketPad() {
+      Color center = new Color(64, 70, 80);
+      Color asphalt = new Color(43, 48, 56);
+      Color panel = new Color(96, 106, 118);
+      Color hazard = new Color(216, 170, 74);
+      int[][] map = {
+         { 1, 1, 1, 1, 1, 1, 1, 1 },
+         { 1, 2, 3, 2, 2, 3, 2, 1 },
+         { 1, 3, 0, 0, 0, 0, 3, 1 },
+         { 1, 2, 0, 2, 2, 0, 2, 1 },
+         { 1, 2, 0, 2, 2, 0, 2, 1 },
+         { 1, 3, 0, 0, 0, 0, 3, 1 },
+         { 1, 2, 3, 2, 2, 3, 2, 1 },
+         { 1, 1, 1, 1, 1, 1, 1, 1 },
+      };
+      return buildFromPalette(map, new Color[] { center, asphalt, panel, hazard });
+   }
+
+   private void generateRocketFrames() {
+      for (int frame = 0; frame < 4; frame++) {
+         cache.put("rocket_f" + frame, generateRocketFrame(frame));
+      }
+   }
+
+   private BufferedImage generateRocketFrame(int frame) {
+      int size = PX * RocketObjective.WIDTH;
+      BufferedImage small = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+      Graphics2D g = small.createGraphics();
+      g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+      g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+            RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+      Color outline = new Color(58, 64, 78);
+      Color hullLight = new Color(234, 239, 246);
+      Color hullMid = new Color(186, 197, 214);
+      Color hullDark = new Color(121, 135, 156);
+      Color nose = new Color(224, 90, 78);
+      Color noseShade = new Color(177, 63, 55);
+      Color stripe = new Color(228, 178, 74);
+      Color window = new Color(108, 198, 245);
+      Color windowRing = new Color(44, 122, 174);
+      Color booster = new Color(199, 207, 218);
+      Color boosterDark = new Color(120, 127, 140);
+      Color fin = new Color(192, 74, 66);
+      Color engine = new Color(82, 90, 104);
+      Color flameOuter = new Color(255, 194, 76);
+      Color flameMid = new Color(255, 145, 42);
+      Color flameInner = new Color(255, 96, 28);
+
+      int centerX = size / 2;
+      int bodyTop = 7;
+      int bodyBottom = 24;
+
+      // Side boosters for a stronger rocket silhouette.
+      g.setColor(boosterDark);
+      g.fillRect(centerX - 9, 12, 3, 11);
+      g.fillRect(centerX + 6, 12, 3, 11);
+      g.setColor(booster);
+      g.fillRect(centerX - 8, 12, 2, 10);
+      g.fillRect(centerX + 6, 12, 2, 10);
+      g.setColor(engine);
+      g.fillRect(centerX - 8, 22, 2, 2);
+      g.fillRect(centerX + 6, 22, 2, 2);
+
+      // Main body.
+      g.setColor(hullDark);
+      g.fillRect(centerX - 5, bodyTop, 10, bodyBottom - bodyTop);
+      g.setColor(hullLight);
+      g.fillRect(centerX - 4, bodyTop + 1, 8, bodyBottom - bodyTop - 2);
+      g.setColor(hullMid);
+      g.fillRect(centerX + 1, bodyTop + 1, 3, bodyBottom - bodyTop - 2);
+
+      // Nose cone and right-side shading.
+      Polygon noseCone = new Polygon(
+         new int[] { centerX, centerX - 6, centerX + 6 },
+         new int[] { 1, bodyTop + 2, bodyTop + 2 },
+         3);
+      g.setColor(nose);
+      g.fillPolygon(noseCone);
+
+      Polygon noseRightShade = new Polygon(
+         new int[] { centerX, centerX + 6, centerX + 2 },
+         new int[] { 2, bodyTop + 2, bodyTop + 2 },
+         3);
+      g.setColor(noseShade);
+      g.fillPolygon(noseRightShade);
+
+      g.setColor(outline);
+      g.drawPolygon(noseCone);
+
+      // Stripes and portholes.
+      g.setColor(stripe);
+      g.fillRect(centerX - 3, 13, 6, 2);
+      g.fillRect(centerX - 2, 18, 4, 1);
+
+      g.setColor(window);
+      g.fillOval(centerX - 2, 10, 4, 4);
+      g.fillOval(centerX - 2, 15, 4, 4);
+      g.setColor(windowRing);
+      g.drawOval(centerX - 2, 10, 4, 4);
+      g.drawOval(centerX - 2, 15, 4, 4);
+
+      // Stabilizer fins.
+      Polygon leftFin = new Polygon(
+         new int[] { centerX - 5, centerX - 10, centerX - 5 },
+         new int[] { 20, 25, 24 },
+         3);
+      Polygon rightFin = new Polygon(
+         new int[] { centerX + 5, centerX + 10, centerX + 5 },
+         new int[] { 20, 25, 24 },
+         3);
+      g.setColor(fin);
+      g.fillPolygon(leftFin);
+      g.fillPolygon(rightFin);
+      g.setColor(outline);
+      g.drawPolygon(leftFin);
+      g.drawPolygon(rightFin);
+
+      // Main engine nozzle.
+      g.setColor(engine);
+      g.fillRect(centerX - 3, bodyBottom - 1, 6, 3);
+      g.setColor(outline);
+      g.drawRect(centerX - 3, bodyBottom - 1, 5, 2);
+
+      int[] outerLength = { 4, 8, 12, 9 };
+      int[] midLength = { 3, 6, 9, 7 };
+      int[] innerLength = { 2, 4, 6, 5 };
+      int flameTopY = bodyBottom + 2;
+      int f = Math.floorMod(frame, 4);
+
+      Polygon outerFlame = new Polygon(
+         new int[] { centerX - 4, centerX + 4, centerX },
+         new int[] { flameTopY, flameTopY, flameTopY + outerLength[f] },
+         3);
+      g.setColor(flameOuter);
+      g.fillPolygon(outerFlame);
+
+      Polygon midFlame = new Polygon(
+         new int[] { centerX - 3, centerX + 3, centerX },
+         new int[] { flameTopY + 1, flameTopY + 1, flameTopY + midLength[f] },
+         3);
+      g.setColor(flameMid);
+      g.fillPolygon(midFlame);
+
+      Polygon innerFlame = new Polygon(
+         new int[] { centerX - 2, centerX + 2, centerX },
+         new int[] { flameTopY + 1, flameTopY + 1, flameTopY + innerLength[f] },
+         3);
+      g.setColor(flameInner);
+      g.fillPolygon(innerFlame);
+
+      g.dispose();
+      return scaleNearest(small, tileSize * RocketObjective.WIDTH, tileSize * RocketObjective.HEIGHT);
    }
 
    // --- Grass: Grüntöne mit zufälligen dunkleren Grashalmen ---
@@ -644,11 +801,15 @@ public class PixelTextures {
 
    /** Skaliert nearest-neighbor (kein Weichzeichner) auf TILE_SIZE. */
    private BufferedImage scaleNearest(BufferedImage src) {
-      BufferedImage scaled = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_ARGB);
+      return scaleNearest(src, tileSize, tileSize);
+   }
+
+   private BufferedImage scaleNearest(BufferedImage src, int width, int height) {
+      BufferedImage scaled = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
       Graphics2D g = scaled.createGraphics();
       g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
             RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-      g.drawImage(src, 0, 0, tileSize, tileSize, null);
+      g.drawImage(src, 0, 0, width, height, null);
       g.dispose();
       return scaled;
    }

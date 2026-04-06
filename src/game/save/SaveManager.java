@@ -8,6 +8,7 @@ import game.entity.ItemStack;
 import game.entity.PlayerCharacter;
 import game.logistics.ConveyorBelt;
 import game.machine.BaseMachine;
+import game.objective.RocketObjective;
 import game.world.Tile;
 import game.world.TileType;
 import game.world.WorldMap;
@@ -41,11 +42,15 @@ public class SaveManager {
 
     public static void save(GameSupervisor supervisor, WorldMap world,
                             PlayerCharacter player, List<BaseMachine> machines,
-                            List<ConveyorBelt> belts, GameMode mode) {
+                            List<ConveyorBelt> belts, GameMode mode,
+                            RocketObjective rocketObjective,
+                            long elapsedPlayTimeMs,
+                            boolean gameEnded) {
         boolean restartAfterSave = supervisor.getRunning().get();
         supervisor.stop();
         try {
-            GameSaveState state = buildState(world, player, machines, belts, mode);
+            GameSaveState state = buildState(world, player, machines, belts, mode,
+                    rocketObjective, elapsedPlayTimeMs, gameEnded);
             Path savePath = getSavePath();
             Files.createDirectories(savePath.getParent());
             Files.writeString(savePath, GSON.toJson(state));
@@ -77,9 +82,24 @@ public class SaveManager {
 
     private static GameSaveState buildState(WorldMap world, PlayerCharacter player,
                                              List<BaseMachine> machines,
-                                             List<ConveyorBelt> belts, GameMode mode) {
+                                             List<ConveyorBelt> belts, GameMode mode,
+                                             RocketObjective rocketObjective,
+                                             long elapsedPlayTimeMs,
+                                             boolean gameEnded) {
         GameSaveState state = new GameSaveState();
         state.gameMode = mode.name();
+        state.elapsedPlayTimeMs = Math.max(0L, elapsedPlayTimeMs);
+        state.gameEnded = gameEnded;
+
+        if (rocketObjective != null) {
+            state.rocketX = rocketObjective.getOriginX();
+            state.rocketY = rocketObjective.getOriginY();
+            state.rocketIronGearsDelivered = rocketObjective.getDeliveredIronGears();
+            state.rocketCopperPlatesDelivered = rocketObjective.getDeliveredCopperPlates();
+            state.rocketConveyorBeltsDelivered = rocketObjective.getDeliveredConveyorBelts();
+            state.rocketStatus = rocketObjective.getStatus().name();
+            state.rocketLaunchStartedAtElapsedMs = rocketObjective.getLaunchStartedAtElapsedMs();
+        }
 
         // Player
         state.player = new GameSaveState.PlayerData();

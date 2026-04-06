@@ -5,6 +5,8 @@ import game.entity.ItemType;
 import game.machine.Smelter;
 import org.junit.jupiter.api.Test;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class WorldMapTest {
@@ -140,5 +142,39 @@ class WorldMapTest {
         assertFalse(tile.hasItem());
         assertDoesNotThrow(() -> tile.setMachine(new Smelter(tile)));
         assertTrue(tile.hasMachine());
+    }
+
+    @Test
+    void transferItemReturnsFalseForRocketDestination() {
+        WorldMap map = new WorldMap(4, 4);
+        Tile from = map.getTile(0, 0);
+        Tile to = map.getTile(1, 0);
+
+        from.setType(TileType.CONVEYOR_BELT);
+        to.setType(TileType.ROCKET);
+
+        from.getLock().lock();
+        try {
+            from.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
+        } finally {
+            from.getLock().unlock();
+        }
+
+        boolean moved = map.transferItem(from, to);
+
+        assertFalse(moved);
+        assertTrue(from.hasItem());
+        assertFalse(to.hasItem());
+    }
+
+    @Test
+    void findRandomAreaOriginReturnsInBoundsOrigin() {
+        WorldMap map = new WorldMap(12, 10);
+        int[] origin = map.findRandomAreaOrigin(4, 4, new Random(42));
+
+        assertTrue(origin[0] >= 0);
+        assertTrue(origin[1] >= 0);
+        assertTrue(origin[0] <= map.getWidth() - 4);
+        assertTrue(origin[1] <= map.getHeight() - 4);
     }
 }
