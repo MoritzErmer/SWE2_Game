@@ -75,8 +75,8 @@ public class WorldMap {
     * - Mit expliziten Locks und konsistenter Ordnung ist Deadlock-Freiheit
     * beweisbar.
     *
-    * @return true wenn Transfer erfolgreich, false wenn Quelle leer oder Ziel
-    *         belegt.
+      * @return true wenn Transfer erfolgreich, false wenn Quelle leer oder Ziel
+      *         belegt.
     */
    public boolean transferItem(Tile from, Tile to) {
       if (from == null || to == null || from == to)

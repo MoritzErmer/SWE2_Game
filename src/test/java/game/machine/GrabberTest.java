@@ -20,11 +20,13 @@ class GrabberTest {
 
         Tile source = map.getTile(1, 2);
         Tile destination = map.getTile(3, 2);
+        destination.setType(TileType.CONVEYOR_BELT);
         source.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
+        assertTrue(grabber.tryInsertInput(new ItemStack(ItemType.COAL, 1)));
 
         grabber.tick();
 
-        assertTrue(source.hasItem(), "Ground item on non-conveyor source must not be grabbed.");
+        assertFalse(source.hasItem(), "Ground item placement on non-conveyor source must be ignored.");
         assertFalse(destination.hasItem(), "Destination should stay empty when source is invalid.");
     }
 
@@ -36,7 +38,9 @@ class GrabberTest {
         Tile source = map.getTile(1, 2);
         Tile destination = map.getTile(3, 2);
         source.setType(TileType.CONVEYOR_BELT);
+        destination.setType(TileType.CONVEYOR_BELT);
         source.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
+        assertTrue(grabber.tryInsertInput(new ItemStack(ItemType.COAL, 1)));
 
         grabber.tick();
 
@@ -53,10 +57,12 @@ class GrabberTest {
 
         Tile source = map.getTile(1, 2);
         Tile destination = map.getTile(3, 2);
+        destination.setType(TileType.CONVEYOR_BELT);
 
         Smelter sourceMachine = new Smelter(source);
         source.setMachine(sourceMachine);
         sourceMachine.setOutputBuffer(new ItemStack(ItemType.IRON_ORE, 1));
+        assertTrue(grabber.tryInsertInput(new ItemStack(ItemType.COAL, 1)));
 
         grabber.tick();
 
@@ -74,8 +80,10 @@ class GrabberTest {
         Tile source = map.getTile(1, 2);
         Tile destination = map.getTile(3, 2);
         source.setType(TileType.CONVEYOR_BELT);
+        destination.setType(TileType.CONVEYOR_BELT);
         source.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
         destination.setItemOnGround(new ItemStack(ItemType.IRON_ORE, 1));
+        assertTrue(grabber.tryInsertInput(new ItemStack(ItemType.COAL, 1)));
 
         grabber.tick();
 

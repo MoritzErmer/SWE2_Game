@@ -58,12 +58,6 @@ public class Main {
       final int MAP_HEIGHT = 80;
       WorldMap map = new WorldMap(MAP_WIDTH, MAP_HEIGHT);
       PlayerCharacter player = new PlayerCharacter(MAP_WIDTH / 2, MAP_HEIGHT / 2);
-      // Startinventar: Werkzeuge für Platzierung
-      player.addItem(ItemType.MINER_KIT, 10);
-      player.addItem(ItemType.SMELTER_KIT, 10);
-      player.addItem(ItemType.GRABBER_KIT, 10);
-      player.addItem(ItemType.FORGE_KIT, 10);
-      player.addItem(ItemType.CONVEYOR_BELT_ITEM, 50);
 
       // --- Maschinen, Belts (initial leer, werden im Spiel platziert) ---
       List<BaseMachine> machines = new CopyOnWriteArrayList<>();
@@ -131,6 +125,7 @@ public class Main {
       player.addItem(ItemType.MINER_KIT, 10);
       player.addItem(ItemType.SMELTER_KIT, 10);
       player.addItem(ItemType.GRABBER_KIT, 10);
+      player.addItem(ItemType.FORGE_KIT, 10);
       player.addItem(ItemType.CONVEYOR_BELT_ITEM, 50);
    }
 
