@@ -22,6 +22,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * periodischen Task.
  * 2. logisticsExecutor (SingleThreadExecutor): Globaler Thread für
  * Fließband-Logik.
+ *
+ * Robustheit:
+ * - Maschinen-Exceptions werden pro Task gefangen und geloggt.
+ * - Der Logistics-Thread wird über ein Future überwacht. Stirbt er
+ * unerwartet, startet ein Watchdog-Task ihn automatisch neu.
+ * - Alle Threads erhalten einen UncaughtExceptionHandler als letzte
+ * Sicherheitsnetz-Ebene.
  */
 public class GameSupervisor {
    private ScheduledExecutorService machineExecutor;
@@ -32,9 +39,14 @@ public class GameSupervisor {
    private final AtomicBoolean running = new AtomicBoolean(false);
 
    // Speichert ScheduledFuture pro Maschine für gezieltes Abmelden
-   // (Dekonstruktion)
    private final Map<BaseMachine, ScheduledFuture<?>> machineFutures = new ConcurrentHashMap<>();
    private final Map<String, ConveyorBelt> beltIndex = new ConcurrentHashMap<>();
+
+   /** Future des aktiven Logistics-Threads — wird vom Watchdog überwacht. */
+   private volatile Future<?> logisticsFuture;
+
+   /** Periodischer Task, der den Logistics-Thread bei Absturz neu startet. */
+   private volatile ScheduledFuture<?> watchdogFuture;
 
    public GameSupervisor(WorldMap map, List<BaseMachine> machines,
          List<ConveyorBelt> belts) {
@@ -64,14 +76,33 @@ public class GameSupervisor {
             try {
                machine.tick();
             } catch (Exception e) {
-               System.err.println("Machine error: " + machine.getName() + " - " + e.getMessage());
+               System.err.printf("[MachineExecutor] Fehler in '%s': %s%n",
+                     machine.getName(), e);
             }
          }, 0, 500, TimeUnit.MILLISECONDS);
          machineFutures.put(machine, future);
       }
 
       // Starte Logistik-Thread für Fließbänder
-      logisticsExecutor.submit(new LogisticsThread(map, belts, running));
+      logisticsFuture = logisticsExecutor.submit(new LogisticsThread(map, belts, running));
+
+      // Watchdog: erkennt toten Logistics-Thread und startet ihn neu (jede Sekunde)
+      watchdogFuture = machineExecutor.scheduleAtFixedRate(() -> {
+         if (!running.get()) {
+            return;
+         }
+         if (logisticsFuture != null && logisticsFuture.isDone()) {
+            System.err.println(
+                  "[GameSupervisor] Logistics-Thread unerwartet beendet — Neustart.");
+            try {
+               logisticsFuture = logisticsExecutor
+                     .submit(new LogisticsThread(map, belts, running));
+            } catch (RejectedExecutionException e) {
+               System.err.println(
+                     "[GameSupervisor] Logistics-Neustart fehlgeschlagen: Executor beendet.");
+            }
+         }
+      }, 1, 1, TimeUnit.SECONDS);
 
       System.out.println("[GameSupervisor] Alle Threads gestartet. Maschinen: "
             + machines.size() + " Belts: " + belts.size());
@@ -91,7 +122,8 @@ public class GameSupervisor {
             try {
                machine.tick();
             } catch (Exception e) {
-               System.err.println("Machine error: " + machine.getName() + " - " + e.getMessage());
+               System.err.printf("[MachineExecutor] Fehler in '%s': %s%n",
+                     machine.getName(), e);
             }
          }, 0, 500, TimeUnit.MILLISECONDS);
          machineFutures.put(machine, future);
@@ -163,6 +195,11 @@ public class GameSupervisor {
     */
    public synchronized void stop() {
       running.set(false);
+      // Watchdog zuerst stoppen, damit er während des Shutdowns keinen Neustart
+      // triggert
+      if (watchdogFuture != null) {
+         watchdogFuture.cancel(false);
+      }
       machineExecutor.shutdownNow();
       logisticsExecutor.shutdownNow();
 
@@ -177,10 +214,17 @@ public class GameSupervisor {
 
    private void initializeExecutors() {
       this.machineExecutor = Executors.newScheduledThreadPool(
-            Runtime.getRuntime().availableProcessors());
+            Runtime.getRuntime().availableProcessors(),
+            r -> {
+               Thread t = new Thread(r, "MachineExecutor-Thread");
+               t.setUncaughtExceptionHandler((thread, ex) -> System.err.printf("[MachineExecutor] Uncaught in %s: %s%n",
+                     thread.getName(), ex));
+               return t;
+            });
       this.logisticsExecutor = Executors.newSingleThreadExecutor(r -> {
          Thread t = new Thread(r, "Logistics-Thread");
          t.setDaemon(true);
+         t.setUncaughtExceptionHandler((thread, ex) -> System.err.printf("[Logistics-Thread] Uncaught: %s%n", ex));
          return t;
       });
    }
