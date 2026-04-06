@@ -30,10 +30,12 @@ class ProductionPipelineIntegrationTest {
         minerTile.setType(TileType.IRON_DEPOSIT);
         Miner miner = new Miner(minerTile);
         minerTile.setMachine(miner);
+        assertTrue(miner.tryInsertInput(new ItemStack(ItemType.COAL, 2)));
 
         Tile grabberTile = map.getTile(2, 1);
         Grabber grabber = new Grabber(grabberTile, map, 2, 1, -1, 0, 1, 0);
         grabberTile.setMachine(grabber);
+        assertTrue(grabber.tryInsertInput(new ItemStack(ItemType.COAL, 2)));
 
         Tile smelterTile = map.getTile(3, 1);
         Smelter smelter = new Smelter(smelterTile);
@@ -80,11 +82,13 @@ class ProductionPipelineIntegrationTest {
         minerTile.setType(TileType.IRON_DEPOSIT);
         Miner miner = new Miner(minerTile);
         minerTile.setMachine(miner);
+        assertTrue(miner.tryInsertInput(new ItemStack(ItemType.COAL, 4)));
 
         // Miner output -> Smelter input
         Tile grabber1Tile = map.getTile(2, 1);
         Grabber grabber1 = new Grabber(grabber1Tile, map, 2, 1, -1, 0, 1, 0);
         grabber1Tile.setMachine(grabber1);
+        assertTrue(grabber1.tryInsertInput(new ItemStack(ItemType.COAL, 4)));
 
         Tile smelterTile = map.getTile(3, 1);
         Smelter smelter = new Smelter(smelterTile);
@@ -94,6 +98,7 @@ class ProductionPipelineIntegrationTest {
         Tile grabber2Tile = map.getTile(4, 1);
         Grabber grabber2 = new Grabber(grabber2Tile, map, 4, 1, -1, 0, 1, 0);
         grabber2Tile.setMachine(grabber2);
+        assertTrue(grabber2.tryInsertInput(new ItemStack(ItemType.COAL, 4)));
 
         Tile forgeTile = map.getTile(5, 1);
         Forge forge = new Forge(forgeTile);
@@ -105,6 +110,7 @@ class ProductionPipelineIntegrationTest {
         Tile grabber3Tile = map.getTile(6, 1);
         Grabber grabber3 = new Grabber(grabber3Tile, map, 6, 1, -1, 0, 1, 0);
         grabber3Tile.setMachine(grabber3);
+        assertTrue(grabber3.tryInsertInput(new ItemStack(ItemType.COAL, 4)));
 
         Tile outputTile = map.getTile(7, 1);
         outputTile.setType(TileType.CONVEYOR_BELT);

@@ -4,6 +4,8 @@ import game.entity.ItemStack;
 import game.entity.ItemType;
 import game.world.Tile;
 
+import java.util.List;
+
 /**
  * Forge: Produziert Zahnräder aus Eisenplatten und verbraucht Kohle als Brennstoff.
  *
@@ -76,6 +78,17 @@ public class Forge extends BaseMachine {
 
    public int getProducedGearsSinceCoal() {
       return producedGearsSinceCoal;
+   }
+
+   @Override
+   public List<ItemStack> drainStoredItems() {
+      List<ItemStack> drained = super.drainStoredItems();
+      if (coalUnits > 0) {
+         drained.add(new ItemStack(ItemType.COAL, coalUnits));
+      }
+      coalUnits = 0;
+      producedGearsSinceCoal = 0;
+      return drained;
    }
 
    public void onGearProduced() {

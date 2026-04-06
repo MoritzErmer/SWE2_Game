@@ -11,9 +11,9 @@ import game.world.WorldMap;
  *
  * Der Greifer hat eine Richtung (source → destination) und arbeitet wie folgt:
  * - Nimmt Items vom Output-Buffer einer Maschine auf dem Quell-Tile
- * ODER vom Boden des Quell-Tiles
+ * ODER von einem Foerderband-Item am Quell-Tile
  * - Legt sie in den Input-Buffer einer Maschine auf dem Ziel-Tile
- * ODER auf den Boden des Ziel-Tiles
+ * ODER auf ein Foerderband-Zieltile
  * - Verbraucht Kohle aus seinem eigenen Input-Buffer als Brennstoff
  *
  * Thread-Sicherheit: tick() wird vom ScheduledExecutorService aufgerufen.
@@ -29,7 +29,7 @@ public class Grabber extends BaseMachine {
    private final WorldMap worldMap;
    private final int tileX;
    private final int tileY;
-   private int fuelCounter = 0; // Zählt Transfers, alle 8 wird 1 Kohle verbraucht
+   private int transferCredits = 0; // Verbleibende Transfers aus bereits verbrauchter Kohle
 
    private static final int TRANSFERS_PER_COAL = 8;
 
@@ -162,7 +162,7 @@ public class Grabber extends BaseMachine {
          }
       }
 
-      // Priorität 2: Item auf dem Boden (nur auf Förderbändern)
+      // Prioritaet 2: Item vom Foerderband
       if (srcTile.isConveyorBelt() && srcTile.hasItem()) {
          ItemStack ground = srcTile.getItemOnGround();
          ItemType type = ground.getType();
@@ -177,7 +177,7 @@ public class Grabber extends BaseMachine {
    }
 
    /**
-    * Liefert 1 Item an das Ziel (Maschinen-Input > Boden).
+    * Liefert 1 Item an das Ziel (Maschinen-Input > Foerderband).
     */
    private boolean deliverToDestination(Tile dstTile, ItemStack item) {
       // Priorität 1: Input-Buffer einer Maschine auf dem Ziel-Tile
@@ -186,7 +186,7 @@ public class Grabber extends BaseMachine {
          return tryInsertInputFromSideCompat(dstTile.getMachine(), item, incomingSide);
       }
 
-      // Priorität 2: Auf den Boden legen (nur auf Förderbändern)
+      // Prioritaet 2: Auf Foerderband legen
       if (!dstTile.isConveyorBelt()) {
          return false;
       }
@@ -203,7 +203,8 @@ public class Grabber extends BaseMachine {
     * Legt ein Item zurück zur Quelle wenn Ziel voll war.
     *
     * Das Zurücklegen darf niemals stillschweigend fehlschlagen, da sonst Items
-    * verloren gehen können. Wenn weder Maschinen-Output noch Bodenablage möglich
+      * verloren gehen können. Wenn weder Maschinen-Output noch Foerderbandablage
+      * moeglich
     * ist, wird deshalb explizit ein Fehler ausgelöst.
     */
    private void returnToSource(Tile srcTile, ItemStack item) {
@@ -274,27 +275,33 @@ public class Grabber extends BaseMachine {
     * Prüft ob genug Brennstoff vorhanden ist.
     */
    private boolean hasFuel() {
-      // Erste Transfers sind kostenlos bis der Zähler voll ist
-      if (fuelCounter < TRANSFERS_PER_COAL)
-         return true;
-      // Kohle im Input-Buffer?
-      return hasInput() && inputBuffer.getType() == ItemType.COAL;
+      return transferCredits > 0 || (hasInput() && inputBuffer.getType() == ItemType.COAL);
    }
 
    /**
     * Verbraucht Brennstoff nach einem erfolgreichen Transfer.
     */
    private void consumeFuel() {
-      fuelCounter++;
-      if (fuelCounter >= TRANSFERS_PER_COAL) {
-         fuelCounter = 0;
-         if (hasInput() && inputBuffer.getType() == ItemType.COAL) {
-            inputBuffer.remove(1);
-            if (inputBuffer.getAmount() <= 0) {
-               inputBuffer = null;
-            }
-         }
+      if (transferCredits <= 0 && !refillTransferCredits()) {
+         throw new IllegalStateException("Grabber transfer succeeded without available coal fuel.");
       }
+      transferCredits--;
+   }
+
+   /**
+    * Wandelt 1 Kohle aus dem Input-Buffer in Transfer-Credits um.
+    */
+   private boolean refillTransferCredits() {
+      if (!(hasInput() && inputBuffer.getType() == ItemType.COAL)) {
+         return false;
+      }
+
+      inputBuffer.remove(1);
+      if (inputBuffer.getAmount() <= 0) {
+         inputBuffer = null;
+      }
+      transferCredits += TRANSFERS_PER_COAL;
+      return true;
    }
 
    /**

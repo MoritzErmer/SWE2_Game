@@ -10,8 +10,6 @@ import game.world.TileType;
  * Ressourcen-Typ des Tiles.
  * Der Miner legt das produzierte Item in seinen Output-Buffer.
  * Ein Greifer kann den Output-Buffer dann entleeren.
- * Alternativ wird das Item auf den Boden gelegt, wenn kein Output-Buffer-Platz
- * ist.
  */
 public class MiningStrategy implements ProductionStrategy {
 
@@ -30,6 +28,15 @@ public class MiningStrategy implements ProductionStrategy {
       ItemType produced = mapToItem(tile.getOriginalType());
       if (produced == null)
          return;
+
+      // Miner benoetigt Kohle als Brennstoff. Auf Kohle-Vorkommen kann er sich
+      // bei Bedarf selbst versorgen.
+      if (machine instanceof Miner) {
+         Miner miner = (Miner) machine;
+         if (!miner.consumeFuelForCycle(produced)) {
+            return;
+         }
+      }
 
       // In Output-Buffer legen
       if (machine.getOutputBuffer() == null) {

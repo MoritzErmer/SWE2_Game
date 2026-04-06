@@ -22,13 +22,17 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
  * Haupt-UI des Spiels mit Grid-Rendering, Inventar-Overlay, Hotbar,
- * Mining-Mechanik (Enter halten) und Item-Platzierung (Linksklick).
+ * Mining-Mechanik (Enter halten) und Infrastruktur-Platzierung (Linksklick).
  *
  * Rendering ist FPS-begrenzt über einen Swing-Timer, der repaint() triggert.
  * Mining läuft als separater SwingWorker-Thread, um den EDT nicht zu
@@ -147,6 +151,18 @@ public class GameUI extends JFrame {
       try {
          if (!tile.hasMachine()) {
             if (tile.getType() == TileType.CONVEYOR_BELT) {
+               List<ItemStack> beltDrops = new ArrayList<>();
+               if (tile.hasItem()) {
+                  ItemStack ground = tile.getItemOnGround();
+                  beltDrops.add(new ItemStack(ground.getType(), ground.getAmount()));
+               }
+               beltDrops.add(new ItemStack(ItemType.CONVEYOR_BELT_ITEM, 1));
+               if (!canAcceptAllStacks(beltDrops)) {
+                  showHudMessage("Inventar voll");
+                  return;
+               }
+
+               transferItemStackToInventory(tile.pickupItem());
                tile.setType(TileType.EMPTY);
                player.addItem(ItemType.CONVEYOR_BELT_ITEM, 1);
                if (onBeltRemoved != null) {
@@ -156,18 +172,30 @@ public class GameUI extends JFrame {
             return;
          }
          BaseMachine machine = tile.getMachine();
-         // Füge das passende Kit-Item ins Inventar zurück
+         ItemType kitType;
          if (machine instanceof Miner) {
-            player.addItem(ItemType.MINER_KIT, 1);
+            kitType = ItemType.MINER_KIT;
          } else if (machine instanceof Smelter) {
-            player.addItem(ItemType.SMELTER_KIT, 1);
+            kitType = ItemType.SMELTER_KIT;
          } else if (machine instanceof Grabber) {
-            player.addItem(ItemType.GRABBER_KIT, 1);
+            kitType = ItemType.GRABBER_KIT;
          } else if (machine instanceof Forge) {
-            player.addItem(ItemType.FORGE_KIT, 1);
+            kitType = ItemType.FORGE_KIT;
          } else {
             return;
          }
+
+         List<ItemStack> machineDrops = getMachineStoredItemsSnapshot(machine);
+         machineDrops.add(new ItemStack(kitType, 1));
+         if (!canAcceptAllStacks(machineDrops)) {
+            showHudMessage("Inventar voll");
+            return;
+         }
+
+         transferMachineStoredItemsToInventory(machine);
+         // Fuege das passende Kit-Item ins Inventar zurueck
+         player.addItem(kitType, 1);
+
          tile.removeMachine();
          if (onMachineRemoved != null)
             onMachineRemoved.accept(machine);
@@ -189,6 +217,70 @@ public class GameUI extends JFrame {
 
    public void setOnBeltRemoved(BiConsumer<Integer, Integer> callback) {
       this.onBeltRemoved = callback;
+   }
+
+   private void transferItemStackToInventory(ItemStack stack) {
+      if (stack == null || stack.getAmount() <= 0) {
+         return;
+      }
+      player.addItem(stack.getType(), stack.getAmount());
+   }
+
+   private void transferMachineStoredItemsToInventory(BaseMachine machine) {
+      if (machine == null) {
+         return;
+      }
+      for (ItemStack stored : machine.drainStoredItems()) {
+         transferItemStackToInventory(stored);
+      }
+   }
+
+   private List<ItemStack> getMachineStoredItemsSnapshot(BaseMachine machine) {
+      List<ItemStack> stored = new ArrayList<>();
+      if (machine == null) {
+         return stored;
+      }
+
+      if (machine.hasInput()) {
+         ItemStack input = machine.getInputBuffer();
+         stored.add(new ItemStack(input.getType(), input.getAmount()));
+      }
+      if (machine.hasOutput()) {
+         ItemStack output = machine.getOutputBuffer();
+         stored.add(new ItemStack(output.getType(), output.getAmount()));
+      }
+      if (machine instanceof Forge) {
+         int coalUnits = ((Forge) machine).getCoalUnits();
+         if (coalUnits > 0) {
+            stored.add(new ItemStack(ItemType.COAL, coalUnits));
+         }
+      }
+
+      return stored;
+   }
+
+   private boolean canAcceptAllStacks(List<ItemStack> stacks) {
+      if (stacks == null || stacks.isEmpty()) {
+         return true;
+      }
+
+      Set<ItemType> existingTypes = new HashSet<>();
+      for (ItemStack invStack : player.getInventory()) {
+         existingTypes.add(invStack.getType());
+      }
+
+      Set<ItemType> newTypes = new HashSet<>();
+      for (ItemStack stack : stacks) {
+         if (stack == null || stack.getAmount() <= 0) {
+            continue;
+         }
+         if (!existingTypes.contains(stack.getType())) {
+            newTypes.add(stack.getType());
+         }
+      }
+
+      int freeSlots = player.getInventorySize() - player.getInventory().size();
+      return newTypes.size() <= freeSlots;
    }
 
    // ==================== SAVE / LOAD ====================
@@ -519,7 +611,7 @@ public class GameUI extends JFrame {
       return !tile.hasItem() && (tile.getType() == TileType.EMPTY || tile.isResourceDeposit());
    }
 
-   /** Platziert das ausgewählte Hotbar-Item auf einem Tile per Linksklick. */
+   /** Platziert das ausgewaehlte platzierbare Hotbar-Item per Linksklick. */
    private void placeItemOnTile(int tx, int ty) {
       ItemStack selected = player.getSelectedItem();
       if (selected == null)
@@ -609,13 +701,6 @@ public class GameUI extends JFrame {
             }
             return;
          }
-
-         // Normales Item ablegen
-         if (tile.canAcceptGroundItem()) {
-            if (player.consumeSelectedItem(1)) {
-               tile.setItemOnGround(new ItemStack(type, 1));
-            }
-         }
       } finally {
          tile.getLock().unlock();
       }
@@ -624,7 +709,9 @@ public class GameUI extends JFrame {
    // ==================== MACHINE INTERACTION ====================
 
    /**
-    * Rechtsklick auf eine Maschine:
+    * Rechtsklick auf ein Tile:
+    * - Foerderband: Boden-Item ins Inventar nehmen
+      * - Miner: Kohle aus Inventar als Brennstoff einfuellen
     * - Greifer: Kohle aus Inventar als Brennstoff einfüllen
     * - Smelter: Erz aus Inventar in Input-Buffer legen
     * - Jede Maschine: Output-Buffer ins Inventar nehmen
@@ -634,10 +721,12 @@ public class GameUI extends JFrame {
       tile.getLock().lock();
       try {
          if (!tile.hasMachine()) {
-            // Kein Maschine → Item vom Boden aufheben
-            if (tile.hasItem()) {
-               ItemStack ground = tile.pickupItem();
-               player.addItem(ground.getType(), ground.getAmount());
+            if (tile.isConveyorBelt() && tile.hasItem()) {
+               if (!canAcceptAllStacks(Collections.singletonList(tile.getItemOnGround()))) {
+                  showHudMessage("Inventar voll");
+                  return;
+               }
+               transferItemStackToInventory(tile.pickupItem());
             }
             return;
          }
@@ -646,8 +735,23 @@ public class GameUI extends JFrame {
 
          // Output abholen (höchste Priorität)
          if (machine.hasOutput()) {
+            if (!canAcceptAllStacks(Collections.singletonList(machine.getOutputBuffer()))) {
+               showHudMessage("Inventar voll");
+               return;
+            }
             ItemStack out = machine.extractOutput();
-            player.addItem(out.getType(), out.getAmount());
+            transferItemStackToInventory(out);
+            return;
+         }
+
+         // Miner: Kohle einfuellen
+         if (machine instanceof Miner) {
+            if (player.getItemCount(ItemType.COAL) > 0) {
+               int toAdd = Math.min(8, player.getItemCount(ItemType.COAL));
+               if (machine.tryInsertInput(new ItemStack(ItemType.COAL, toAdd))) {
+                  player.removeItem(ItemType.COAL, toAdd);
+               }
+            }
             return;
          }
 

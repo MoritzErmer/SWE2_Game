@@ -124,7 +124,7 @@ public class Main {
       supervisor.start();
 
       System.out.println("=== 2D Automation Game gestartet ===");
-      System.out.println("Steuerung: WASD=Bewegen, 1=Miner, 2=Smelter, E=Item aufheben");
+      System.out.println("Steuerung: WASD=Bewegen, Enter=Mining, E=Inventar, C=Crafting, R=Rotation, Q=Dekonstruktion");
       System.out.println("Karte: " + MAP_WIDTH + "x" + MAP_HEIGHT + " Tiles");
    }
 

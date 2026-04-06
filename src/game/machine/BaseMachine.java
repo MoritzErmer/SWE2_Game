@@ -1,8 +1,10 @@
 package game.machine;
 
 import game.entity.ItemStack;
-import game.entity.ItemType;
 import game.world.Tile;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Abstrakte Basisklasse für alle Maschinen.
@@ -113,6 +115,25 @@ public abstract class BaseMachine {
 
    public void setOutputBuffer(ItemStack item) {
       this.outputBuffer = item;
+   }
+
+   /**
+    * Entnimmt alle in der Maschine gespeicherten Items (Input + Output) und
+    * leert die Buffer.
+    */
+   public List<ItemStack> drainStoredItems() {
+      List<ItemStack> drained = new ArrayList<>();
+
+      if (hasInput()) {
+         drained.add(inputBuffer);
+      }
+      if (hasOutput()) {
+         drained.add(outputBuffer);
+      }
+
+      inputBuffer = null;
+      outputBuffer = null;
+      return drained;
    }
 
    /** Entnimmt den gesamten Output-Buffer und gibt ihn zurück. */
