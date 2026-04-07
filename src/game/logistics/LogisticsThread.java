@@ -4,6 +4,8 @@ import game.world.Tile;
 import game.world.WorldMap;
 
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -38,9 +40,10 @@ public class LogisticsThread implements Runnable {
       int consecutiveErrorTicks = 0;
       while (running.get() && !Thread.currentThread().isInterrupted()) {
          boolean anyError = false;
+         Set<Tile> movedThisTick = new HashSet<>();
          for (ConveyorBelt belt : belts) {
             try {
-               processBelt(belt);
+               processBelt(belt, movedThisTick);
             } catch (Exception e) {
                anyError = true;
                System.err.printf("[LogisticsThread] Belt-Fehler bei (%d,%d): %s%n",
@@ -70,17 +73,25 @@ public class LogisticsThread implements Runnable {
 
    /**
     * Bewegt ein Item auf einem Belt zum nächsten Tile in Belt-Richtung.
+    * Pro Tick darf jedes Tile höchstens einmal ein Item empfangen.
     */
-   private void processBelt(ConveyorBelt belt) {
+   private void processBelt(ConveyorBelt belt, Set<Tile> movedThisTick) {
       Tile source = belt.getTile();
       if (!source.hasItem())
+         return;
+
+      // Skip if this source tile already received an item this tick
+      if (movedThisTick.contains(source))
          return;
 
       ConveyorBelt.Direction dir = belt.getDirection();
       int tx = belt.getX() + dir.dx;
       int ty = belt.getY() + dir.dy;
       if (map.inBounds(tx, ty)) {
-         map.transferItem(source, map.getTile(tx, ty));
+         Tile dest = map.getTile(tx, ty);
+         if (map.transferItem(source, dest)) {
+            movedThisTick.add(dest);
+         }
       }
    }
 }

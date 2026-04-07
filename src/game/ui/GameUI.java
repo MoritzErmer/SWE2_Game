@@ -84,6 +84,7 @@ public class GameUI extends JFrame {
 
    // Overlay state
    private boolean inventoryOpen = false;
+   private int inventorySelectedSlot = 0;
    private boolean craftingOpen = false;
    private int craftingSelectedIndex = 0;
    private String craftingMessage = null;
@@ -505,6 +506,31 @@ public class GameUI extends JFrame {
             if (inventoryOpen) {
                if (e.getKeyCode() == KeyEvent.VK_E) {
                   inventoryOpen = false;
+               } else {
+                  int cols = 5;
+                  int invSize = player.getInventorySize();
+                  int delta = 0;
+                  if (e.getKeyCode() == KeyEvent.VK_RIGHT)
+                     delta = 1;
+                  else if (e.getKeyCode() == KeyEvent.VK_LEFT)
+                     delta = -1;
+                  else if (e.getKeyCode() == KeyEvent.VK_DOWN)
+                     delta = cols;
+                  else if (e.getKeyCode() == KeyEvent.VK_UP)
+                     delta = -cols;
+                  if (delta != 0) {
+                     int next = inventorySelectedSlot + delta;
+                     if (next >= 0 && next < invSize) {
+                        if (e.isShiftDown()) {
+                           // Shift+Arrow: swap only if both slots hold items
+                           List<ItemStack> inv = player.getInventory();
+                           if (inventorySelectedSlot < inv.size() && next < inv.size()) {
+                              Collections.swap(inv, inventorySelectedSlot, next);
+                           }
+                        }
+                        inventorySelectedSlot = next;
+                     }
+                  }
                }
                return;
             }
@@ -926,24 +952,21 @@ public class GameUI extends JFrame {
             return;
          }
 
-         // Greifer: Kohle einfüllen
+         // Greifer: manuelle Kohlebefüllung gesperrt
          if (machine instanceof Grabber) {
-            if (player.getItemCount(ItemType.COAL) > 0) {
-               int toAdd = Math.min(8, player.getItemCount(ItemType.COAL));
-               if (machine.tryInsertInput(new ItemStack(ItemType.COAL, toAdd))) {
-                  player.removeItem(ItemType.COAL, toAdd);
-               }
-            }
+            showHudMessage("Greifer wird automatisch befüllt");
             return;
          }
 
-         // Smelter: Erz einfüllen aus Hotbar
+         // Smelter: Erz oder Kohle einfüllen aus Hotbar
          if (machine instanceof Smelter) {
             ItemStack selected = player.getSelectedItem();
             if (selected != null) {
                ItemType type = selected.getType();
-               if (type == ItemType.IRON_ORE || type == ItemType.COPPER_ORE) {
-                  int toAdd = Math.min(5, selected.getAmount());
+               if (type == ItemType.IRON_ORE || type == ItemType.COPPER_ORE || type == ItemType.COAL) {
+                  int toAdd = (type == ItemType.COAL)
+                        ? Math.min(8, selected.getAmount())
+                        : Math.min(5, selected.getAmount());
                   if (machine.tryInsertInput(new ItemStack(type, toAdd))) {
                      player.consumeSelectedItem(toAdd);
                   }
@@ -1327,7 +1350,7 @@ public class GameUI extends JFrame {
       // --- Inventory Overlay ---
       private void drawInventoryOverlay(Graphics2D g2) {
          int panelW = 320;
-         int panelH = 280;
+         int panelH = 295;
          int px = (getWidth() - panelW) / 2;
          int py = (getHeight() - panelH) / 2;
 
@@ -1377,19 +1400,53 @@ public class GameUI extends JFrame {
                g2.drawString(stack.getType().getDisplayName(), cx + 2, cy + cellSize - 8);
                g2.drawString("x" + stack.getAmount(), cx + 30, cy + 14);
             }
+
+            // Cyan double-border for selected slot
+            if (i == inventorySelectedSlot) {
+               g2.setColor(Color.CYAN);
+               g2.drawRect(cx, cy, cellSize - 4, cellSize - 4);
+               g2.drawRect(cx - 1, cy - 1, cellSize - 2, cellSize - 2);
+            }
          }
 
-         // Close hint
+         // Hint lines
          g2.setColor(new Color(180, 180, 180));
          g2.setFont(new Font("SansSerif", Font.ITALIC, 11));
-         g2.drawString("Drücke [E] zum Schließen", px + panelW / 2 - 75, py + panelH - 10);
+         g2.drawString("[\u2190\u2191\u2192\u2193] Cursor bewegen", px + 10, py + panelH - 26);
+         g2.drawString("[Shift+Pfeil] Slots tauschen  [E] Schlie\u00DFen", px + 10, py + panelH - 10);
       }
 
       // --- Crafting Overlay ---
       private void drawCraftingOverlay(Graphics2D g2) {
          java.util.List<CraftingRecipe> recipes = craftingManager.getRecipes();
-         int panelW = 380;
          int rowH = 56;
+
+         // Adaptive panel width based on content
+         Font nameFont = new Font("SansSerif", Font.BOLD, 13);
+         Font ingFont = new Font("Monospaced", Font.PLAIN, 11);
+         Font hintFont = new Font("SansSerif", Font.ITALIC, 11);
+         FontMetrics nameFm = g2.getFontMetrics(nameFont);
+         FontMetrics ingFm = g2.getFontMetrics(ingFont);
+         FontMetrics hintFm = g2.getFontMetrics(hintFont);
+
+         int maxRowStringWidth = 0;
+         for (CraftingRecipe recipe : recipes) {
+            String nameStr = recipe.getName() + "  \u2192  x" + recipe.getResultAmount();
+            maxRowStringWidth = Math.max(maxRowStringWidth, nameFm.stringWidth(nameStr));
+            StringBuilder ingStr = new StringBuilder();
+            for (java.util.Map.Entry<ItemType, Integer> entry : recipe.getIngredients().entrySet()) {
+               int have = player.getItemCount(entry.getKey());
+               int need = entry.getValue();
+               if (ingStr.length() > 0)
+                  ingStr.append("  ");
+               ingStr.append(entry.getKey().getDisplayName())
+                     .append(" ").append(have >= need ? "" : "!").append(have).append("/").append(need);
+            }
+            maxRowStringWidth = Math.max(maxRowStringWidth, ingFm.stringWidth(ingStr.toString()));
+         }
+         String hintStr = "[W/S] Auswahl  [Enter] Craften  [C] Schlie\u00DFen";
+         int hintStringWidth = hintFm.stringWidth(hintStr);
+         int panelW = Math.max(380, Math.max(56 + maxRowStringWidth + 40, hintStringWidth + 60));
          int panelH = 60 + recipes.size() * rowH + 30;
          int px = (getWidth() - panelW) / 2;
          int py = (getHeight() - panelH) / 2;
@@ -1485,9 +1542,8 @@ public class GameUI extends JFrame {
 
          // Controls hint
          g2.setColor(new Color(160, 160, 170));
-         g2.setFont(new Font("SansSerif", Font.ITALIC, 11));
-         g2.drawString("[W/S] Auswahl  [Enter] Craften  [C] Schlie\u00DFen",
-               px + 40, py + panelH - 28);
+         g2.setFont(hintFont);
+         g2.drawString(hintStr, px + 40, py + panelH - 28);
       }
 
       private BufferedImage getTileTexture(Tile tile) {
