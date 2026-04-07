@@ -39,7 +39,7 @@ public class SmeltingStrategy implements ProductionStrategy {
          }
       }
 
-      // 2 Erz verbrauchen (wie manuelles Rezept)
+      // 2 Erz pro Zyklus verbrauchen
       if (input.getAmount() < 2) {
          return;
       }

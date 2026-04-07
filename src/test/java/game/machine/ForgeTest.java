@@ -41,7 +41,7 @@ class ForgeTest {
       Tile tile = new Tile();
       Forge forge = new Forge(tile);
       tile.setMachine(forge);
-      forge.tryInsertInput(new ItemStack(ItemType.IRON_PLATE, 2));
+      forge.tryInsertInput(new ItemStack(ItemType.IRON_PLATE, 8));
 
       forge.tick();
 
@@ -49,13 +49,13 @@ class ForgeTest {
    }
 
    @Test
-   void forgeProducesGearFromTwoIronPlatesWhenFueled() {
+   void forgeProducesGearFromEightIronPlatesWhenFueled() {
       Tile tile = new Tile();
       Forge forge = new Forge(tile);
       tile.setMachine(forge);
 
       assertTrue(forge.tryInsertInput(new ItemStack(ItemType.COAL, 1)));
-      assertTrue(forge.tryInsertInput(new ItemStack(ItemType.IRON_PLATE, 2)));
+      assertTrue(forge.tryInsertInput(new ItemStack(ItemType.IRON_PLATE, 8)));
 
       forge.tick();
 
@@ -73,7 +73,7 @@ class ForgeTest {
       tile.setMachine(forge);
 
       assertTrue(forge.tryInsertInput(new ItemStack(ItemType.COAL, 1)));
-      assertTrue(forge.tryInsertInput(new ItemStack(ItemType.IRON_PLATE, 6)));
+      assertTrue(forge.tryInsertInput(new ItemStack(ItemType.IRON_PLATE, 24)));
 
       forge.tick();
       forge.tick();

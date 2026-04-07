@@ -4,7 +4,7 @@ import game.entity.ItemStack;
 import game.entity.ItemType;
 
 /**
- * ForgingStrategy: 2x Iron Plate -> 1x Iron Gear.
+ * ForgingStrategy: 8x Iron Plate -> 1x Iron Gear.
  * Brennstofflogik wird über Forge verwaltet (1 Kohle pro 3 Zahnräder).
  */
 public class ForgingStrategy implements ProductionStrategy {
