@@ -1,2 +1,0 @@
-- [Standalone Packaging Architecture](project_packaging.md) — jlink+jpackage Windows EXE; exec-maven-plugin in pom.xml
-- [Game Feature Architecture](project_features.md) — MainMenu+GameMode, Save/Load (Gson), direction-aware belt textures
