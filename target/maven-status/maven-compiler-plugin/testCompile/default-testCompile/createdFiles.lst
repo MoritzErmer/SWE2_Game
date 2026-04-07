@@ -1,5 +1,0 @@
-game\world\WorldMapTest.class
-game\crafting\CraftingManagerTest.class
-game\integration\ProductionPipelineIntegrationTest.class
-game\integration\SupervisorLifecycleE2ETest.class
-game\integration\MachineStressAndReliabilityTest.class
