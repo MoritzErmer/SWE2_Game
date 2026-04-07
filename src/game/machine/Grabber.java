@@ -6,15 +6,15 @@ import game.world.Tile;
 import game.world.WorldMap;
 
 /**
- * Greifer (Grabber/Inserter): Kohlebetriebene Maschine, die Items von einem
- * Quell-Tile zum Ziel-Tile transportiert. Verbraucht 1 Kohle pro 8 Transfers.
+ * Greifer (Grabber/Inserter): Elektrische Maschine, die Items von einem
+ * Quell-Tile zum Ziel-Tile transportiert. Benötigt keinen Brennstoff und
+ * erzeugt keine Luftverschmutzung.
  *
  * Der Greifer hat eine Richtung (source → destination) und arbeitet wie folgt:
  * - Nimmt Items vom Output-Buffer einer Maschine auf dem Quell-Tile
  * ODER von einem Förderband-Quell-Tile
  * - Legt sie in den Input-Buffer einer Maschine auf dem Ziel-Tile
  * ODER auf ein Foerderband-Zieltile
- * - Verbraucht Kohle aus seinem eigenen Input-Buffer als Brennstoff
  *
  * Thread-Sicherheit: tick() wird vom ScheduledExecutorService aufgerufen.
  * Lock-Ordering: Quell-Tile → Ziel-Tile (nach identityHashCode) um Deadlocks zu
@@ -29,10 +29,7 @@ public class Grabber extends BaseMachine {
    private final WorldMap worldMap;
    private final int tileX;
    private final int tileY;
-   private int transferCredits = 0; // Verbleibende Transfers aus bereits verbrauchter Kohle
    private volatile boolean working = false; // Letzter Tick hat Transfer durchgeführt
-
-   private static final int TRANSFERS_PER_COAL = 8;
 
    /**
     * Erstellt einen Greifer.
@@ -128,10 +125,6 @@ public class Grabber extends BaseMachine {
    private void doTransfer(Tile srcTile, Tile dstTile) {
       working = false; // Zurücksetzen – nur bei erfolgreichem Transfer auf true setzen
 
-      // Brennstoff prüfen
-      if (!hasFuel())
-         return;
-
       // Rocket objective is fed manually only.
       if (dstTile.isRocketTile()) {
          return;
@@ -154,9 +147,7 @@ public class Grabber extends BaseMachine {
          return;
       }
 
-      // Brennstoff verbrauchen
       working = true;
-      consumeFuel();
    }
 
    /**
@@ -289,36 +280,11 @@ public class Grabber extends BaseMachine {
    }
 
    /**
-    * Prüft ob genug Brennstoff vorhanden ist.
+    * Greifer erzeugen keine Luftverschmutzung.
     */
-   private boolean hasFuel() {
-      return transferCredits > 0 || (hasInput() && inputBuffer.getType() == ItemType.COAL);
-   }
-
-   /**
-    * Verbraucht Brennstoff nach einem erfolgreichen Transfer.
-    */
-   private void consumeFuel() {
-      if (transferCredits <= 0 && !refillTransferCredits()) {
-         throw new IllegalStateException("Grabber transfer succeeded without available coal fuel.");
-      }
-      transferCredits--;
-   }
-
-   /**
-    * Wandelt 1 Kohle aus dem Input-Buffer in Transfer-Credits um.
-    */
-   private boolean refillTransferCredits() {
-      if (!(hasInput() && inputBuffer.getType() == ItemType.COAL)) {
-         return false;
-      }
-
-      inputBuffer.remove(1);
-      if (inputBuffer.getAmount() <= 0) {
-         inputBuffer = null;
-      }
-      transferCredits += TRANSFERS_PER_COAL;
-      return true;
+   @Override
+   public int getPollutionPerTick() {
+      return 0;
    }
 
    /**

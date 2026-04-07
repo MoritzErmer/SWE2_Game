@@ -8,7 +8,7 @@ import game.world.Tile;
  * SmeltingStrategy: Schmilzt Erz-Items aus dem Input-Buffer zu Platten im
  * Output-Buffer.
  * Der Smelter nimmt Erz aus dem Input, verarbeitet es und legt Platten in den
- * Output.
+ * Output. Benötigt Kohle als Brennstoff (verwaltet im Smelter).
  * Greifer füllen den Input und leeren den Output.
  */
 public class SmeltingStrategy implements ProductionStrategy {
@@ -30,6 +30,14 @@ public class SmeltingStrategy implements ProductionStrategy {
       ItemType output = smelt(input.getType());
       if (output == null)
          return; // Nicht schmelzbar
+
+      // Brennstoff prüfen und verbrauchen
+      if (machine instanceof Smelter) {
+         Smelter smelter = (Smelter) machine;
+         if (!smelter.consumeFuelForCycle()) {
+            return;
+         }
+      }
 
       // 1 Erz verbrauchen
       input.remove(1);

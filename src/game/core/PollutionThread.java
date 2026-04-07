@@ -13,16 +13,17 @@ import java.util.List;
  * start()/interrupt(), kein Executor-Wrapping.
  *
  * Takt: jede Sekunde
- * - Alle 2 Sekunden: + Anzahl aktiver Maschinen (0.5 Punkte/s pro Maschine)
- * - Alle 5 Sekunden: -5 Punkte Decay
+ * - Jede Sekunde: + Summe getPollutionPerTick() aktiver Maschinen
+ * (Greifer: immer 0; inaktive Maschinen ohne Brennstoff/Input: 0)
+ * - Alle 5 Sekunden: -3 Punkte Decay
  * - Alle 2 Sekunden: HP-Schaden je nach Pollution-Level:
- * >= 100: 4 HP | >= 75: 2 HP | >= 50: 1 HP | < 50: kein Schaden
+ * >= 75: 4 HP | >= 50: 2 HP | >= 25: 1 HP | < 25: kein Schaden
  */
 public class PollutionThread extends Thread {
 
    private static final int DECAY_INTERVAL_S = 5;
-   private static final int DECAY_AMOUNT = 5;
-   private static final int ACCUMULATION_INTERVAL_S = 2;
+   private static final int DECAY_AMOUNT = 3;
+   private static final int ACCUMULATION_INTERVAL_S = 1;
 
    private final PollutionManager pollutionManager;
    private final PlayerCharacter player;
@@ -50,18 +51,21 @@ public class PollutionThread extends Thread {
 
          tickCount++;
 
-         // Decay: -5 Punkte alle 5 Sekunden
+         // Decay: -3 Punkte alle 5 Sekunden
          if (tickCount % DECAY_INTERVAL_S == 0) {
             pollutionManager.decreasePollution(DECAY_AMOUNT);
          }
 
-         // Accumulation: alle 2 Sekunden +1 pro aktiver Maschine (= 0.5/s pro Maschine)
+         // Accumulation: jede Sekunde Summe der aktiven Maschinen-Pollution.
+         // Inaktive Maschinen (kein Brennstoff / kein Input / voller Output) und
+         // Greifer (getPollutionPerTick() == 0) tragen nichts bei.
          if (tickCount % ACCUMULATION_INTERVAL_S == 0) {
-            int machineCount = machines.size();
-            if (machineCount > 0) {
-               pollutionManager.addPollution(machineCount);
-               System.out.printf("[PollutionThread] +%d Pollution (%d Maschinen)%n",
-                     machineCount, machineCount);
+            int totalPollution = machines.stream()
+                  .mapToInt(BaseMachine::getPollutionPerTick)
+                  .sum();
+            if (totalPollution > 0) {
+               pollutionManager.addPollution(totalPollution);
+               System.out.printf("[PollutionThread] +%d Pollution%n", totalPollution);
             }
          }
 
@@ -69,11 +73,11 @@ public class PollutionThread extends Thread {
          if (tickCount % 2 == 0 && player != null && player.isAlive()) {
             int level = pollutionManager.getPollutionLevel();
             int damage;
-            if (level >= 100) {
+            if (level >= 75) {
                damage = 4;
-            } else if (level >= 75) {
-               damage = 2;
             } else if (level >= 50) {
+               damage = 2;
+            } else if (level >= 25) {
                damage = 1;
             } else {
                damage = 0;

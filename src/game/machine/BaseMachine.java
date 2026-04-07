@@ -176,13 +176,26 @@ public abstract class BaseMachine {
    }
 
    /**
-    * Gibt an, wie viele Pollution-Punkte diese Maschine pro Tick erzeugt.
-    * Subklassen überschreiben diese Methode, um Pollution zu erzeugen.
+    * Gibt an, ob die Maschine gerade aktiv arbeitet (für Animation und Pollution).
+    * Standard: true. Subklassen überschreiben diese Methode um inaktive Zustände
+    * (fehlendem Brennstoff, leerem Input, vollem Output) zu signalisieren.
     *
-    * @return Pollution-Punkte pro Tick (Standard: 0)
+    * @return true wenn die Maschine in diesem Tick arbeitet
+    */
+   public boolean isActiveForAnimation() {
+      return true;
+   }
+
+   /**
+    * Gibt an, wie viele Pollution-Punkte diese Maschine pro Tick erzeugt.
+    * Pollution entsteht nur, wenn die Maschine aktiv arbeitet
+    * (isActiveForAnimation()).
+    * Greifer überschreiben diese Methode und geben immer 0 zurück.
+    *
+    * @return Pollution-Punkte pro Tick (0 wenn inaktiv)
     */
    public int getPollutionPerTick() {
-      return 1;
+      return isActiveForAnimation() ? 1 : 0;
    }
 
    @Override
