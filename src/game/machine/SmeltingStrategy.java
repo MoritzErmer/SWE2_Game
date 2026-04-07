@@ -39,8 +39,11 @@ public class SmeltingStrategy implements ProductionStrategy {
          }
       }
 
-      // 1 Erz verbrauchen
-      input.remove(1);
+      // 2 Erz verbrauchen (wie manuelles Rezept)
+      if (input.getAmount() < 2) {
+         return;
+      }
+      input.remove(2);
       if (input.getAmount() <= 0) {
          machine.setInputBuffer(null);
       }

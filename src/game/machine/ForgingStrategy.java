@@ -21,7 +21,7 @@ public class ForgingStrategy implements ProductionStrategy {
       }
 
       ItemStack input = machine.getInputBuffer();
-      if (input.getType() != ItemType.IRON_PLATE || input.getAmount() < 2) {
+      if (input.getType() != ItemType.IRON_PLATE || input.getAmount() < 8) {
          return;
       }
 
@@ -29,7 +29,7 @@ public class ForgingStrategy implements ProductionStrategy {
          return;
       }
 
-      input.remove(2);
+      input.remove(8);
       if (input.getAmount() <= 0) {
          machine.setInputBuffer(null);
       }
