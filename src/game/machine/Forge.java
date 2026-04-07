@@ -7,7 +7,8 @@ import game.world.Tile;
 import java.util.List;
 
 /**
- * Forge: Produziert Zahnräder aus Eisenplatten und verbraucht Kohle als Brennstoff.
+ * Forge: Produziert Zahnräder aus Eisenplatten und verbraucht Kohle als
+ * Brennstoff.
  *
  * IO-Mapping relativ zur Front (direction):
  * - Output: Front
@@ -111,7 +112,7 @@ public class Forge extends BaseMachine {
          return false;
 
       return outputBuffer == null
-         || (outputBuffer.getType() == ItemType.IRON_GEAR && outputBuffer.getAmount() < MAX_OUTPUT);
+            || (outputBuffer.getType() == ItemType.IRON_GEAR && outputBuffer.getAmount() < MAX_OUTPUT);
    }
 
    private boolean tryInsertCoal(int amount) {

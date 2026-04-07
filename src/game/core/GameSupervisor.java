@@ -1,5 +1,6 @@
 package game.core;
 
+import game.entity.PlayerCharacter;
 import game.logistics.ConveyorBelt;
 import game.logistics.LogisticsThread;
 import game.machine.Direction;
@@ -48,6 +49,25 @@ public class GameSupervisor {
    /** Periodischer Task, der den Logistics-Thread bei Absturz neu startet. */
    private volatile ScheduledFuture<?> watchdogFuture;
 
+   // ==================== Pollution (Threading-Ansatz 3: raw Thread)
+   // ====================
+
+   /**
+    * Zentraler Pollution-Manager: verwaltet den aktuellen Verschmutzungs-Level.
+    * Wird von Maschinen-Ticks beschrieben und vom PollutionThread gelesen.
+    */
+   private final PollutionManager pollutionManager = new PollutionManager();
+
+   /**
+    * Direkter Thread (kein Executor) für Pollution-Abbau und HP-Schaden.
+    * Threading-Ansatz 3: raw Thread-Subklasse, gestartet mit start(), gestoppt
+    * mit interrupt() — kein Executor, manueller Lifecycle.
+    */
+   private volatile Thread pollutionThread;
+
+   /** Spieler-Referenz für HP-Schaden durch Pollution. */
+   private PlayerCharacter player;
+
    public GameSupervisor(WorldMap map, List<BaseMachine> machines,
          List<ConveyorBelt> belts) {
       this.map = map;
@@ -82,6 +102,11 @@ public class GameSupervisor {
          }, 0, 500, TimeUnit.MILLISECONDS);
          machineFutures.put(machine, future);
       }
+
+      // Starte Pollution-Thread (Threading-Ansatz 3: raw Thread-Subklasse)
+      pollutionThread = new PollutionThread(pollutionManager, player, machines);
+      pollutionThread.start();
+      System.out.println("[GameSupervisor] PollutionThread gestartet.");
 
       // Starte Logistik-Thread für Fließbänder
       logisticsFuture = logisticsExecutor.submit(new LogisticsThread(map, belts, running));
@@ -200,6 +225,10 @@ public class GameSupervisor {
       if (watchdogFuture != null) {
          watchdogFuture.cancel(false);
       }
+      // Pollution-Thread stoppen (raw Thread: interrupt statt Executor-Shutdown)
+      if (pollutionThread != null) {
+         pollutionThread.interrupt();
+      }
       machineExecutor.shutdownNow();
       logisticsExecutor.shutdownNow();
 
@@ -246,6 +275,14 @@ public class GameSupervisor {
 
    public List<ConveyorBelt> getBelts() {
       return Collections.unmodifiableList(belts);
+   }
+
+   public PollutionManager getPollutionManager() {
+      return pollutionManager;
+   }
+
+   public void setPlayer(PlayerCharacter player) {
+      this.player = player;
    }
 
    private String beltKey(int x, int y) {

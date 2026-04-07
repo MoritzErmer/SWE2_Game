@@ -87,12 +87,14 @@ public class Main {
 
       // --- Game Supervisor erstellen ---
       GameSupervisor supervisor = new GameSupervisor(map, machines, belts);
+      supervisor.setPlayer(player);
 
       // --- UI im EDT starten ---
       SwingUtilities.invokeLater(() -> {
          GameUI ui = new GameUI(map, player, gameMode);
          ui.setSaveContext(supervisor, supervisor.getMachines(), supervisor.getBelts());
          ui.setRocketContext(finalRocketObjective, finalInitialElapsedPlayTimeMs, finalGameAlreadyEnded);
+         ui.setPollutionManager(supervisor.getPollutionManager());
 
          // Creative mode is applied to CraftingManager in the GameUI constructor.
 
@@ -302,7 +304,8 @@ public class Main {
          }
       }
 
-      // Backward compatibility: older saves may contain conveyor tiles but no belt list.
+      // Backward compatibility: older saves may contain conveyor tiles but no belt
+      // list.
       if (state.modifiedTiles != null) {
          for (GameSaveState.TileData tileData : state.modifiedTiles) {
             if (tileData == null || !map.inBounds(tileData.x, tileData.y) || hasBeltAt(belts, tileData.x, tileData.y)) {
@@ -371,7 +374,8 @@ public class Main {
 
    private static TileType inferMachineBaseTileType(GameSaveState.MachineData machineData) {
       if ("Miner".equals(machineData.machineType)) {
-         ItemType fromOutput = parseItemType(machineData.outputBuffer != null ? machineData.outputBuffer.itemType : null);
+         ItemType fromOutput = parseItemType(
+               machineData.outputBuffer != null ? machineData.outputBuffer.itemType : null);
          TileType inferred = mapMinedItemToDeposit(fromOutput);
          return inferred != null ? inferred : TileType.IRON_DEPOSIT;
       }

@@ -3,6 +3,7 @@ package game.machine;
 import game.entity.ItemStack;
 import game.entity.ItemType;
 import game.world.Tile;
+import game.world.TileType;
 
 /**
  * Miner: Baut Erz von einem Ressourcen-Vorkommen ab.
@@ -90,5 +91,23 @@ public class Miner extends BaseMachine {
 
       productionCredits = PRODUCTIONS_PER_COAL;
       return true;
+   }
+
+   /**
+    * Gibt an, ob der Miner aktiv arbeitet (für Animation).
+    * Inaktiv bei vollem Output-Buffer (blockierter Pfad) oder fehlendem
+    * Brennstoff.
+    */
+   public boolean isActiveForAnimation() {
+      // Output-Buffer voll → blockierter Pfad
+      if (isOutputFull())
+         return false;
+
+      // Kohle-Vorkommen: Miner versorgt sich selbst → immer aktiv
+      if (tile.getOriginalType() == TileType.COAL_DEPOSIT)
+         return true;
+
+      // Andere Vorkommen: benötigen Kohle im Input-Buffer oder vorhandene Credits
+      return productionCredits > 0 || (hasInput() && inputBuffer.getType() == ItemType.COAL);
    }
 }
