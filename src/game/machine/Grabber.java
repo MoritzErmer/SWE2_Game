@@ -30,6 +30,7 @@ public class Grabber extends BaseMachine {
    private final int tileX;
    private final int tileY;
    private int transferCredits = 0; // Verbleibende Transfers aus bereits verbrauchter Kohle
+   private volatile boolean working = false; // Letzter Tick hat Transfer durchgeführt
 
    private static final int TRANSFERS_PER_COAL = 8;
 
@@ -76,6 +77,14 @@ public class Grabber extends BaseMachine {
    }
 
    /**
+    * Gibt an, ob der Greifer aktiv arbeitet (für Animation).
+    * Inaktiv bei fehlendem Brennstoff oder blockiertem/leerem Pfad.
+    */
+   public boolean isActiveForAnimation() {
+      return working;
+   }
+
+   /**
     * Überschreibt tick() für Lock-Ordering über mehrere Tiles.
     * Lockt Quell-, eigenes und Ziel-Tile in einer festen Reihenfolge.
     */
@@ -117,6 +126,8 @@ public class Grabber extends BaseMachine {
     * Führt den eigentlichen Transfer durch (alle Locks müssen gehalten werden).
     */
    private void doTransfer(Tile srcTile, Tile dstTile) {
+      working = false; // Zurücksetzen – nur bei erfolgreichem Transfer auf true setzen
+
       // Brennstoff prüfen
       if (!hasFuel())
          return;
@@ -144,6 +155,7 @@ public class Grabber extends BaseMachine {
       }
 
       // Brennstoff verbrauchen
+      working = true;
       consumeFuel();
    }
 

@@ -1662,16 +1662,31 @@ public class GameUI extends JFrame {
 
       private BufferedImage getMachineTexture(BaseMachine machine, int frame) {
          if (machine instanceof Grabber) {
+            Grabber grabber = (Grabber) machine;
+            if (!grabber.isActiveForAnimation()) {
+               BufferedImage t = textures.getRotated("grabber_f0", machine.getDirection());
+               return (t != null) ? t : textures.getRotated("grabber", machine.getDirection());
+            }
             int f = Math.floorMod(frame / 8, 4);
             BufferedImage t = textures.getRotated("grabber_f" + f, machine.getDirection());
             return (t != null) ? t : textures.getRotated("grabber", machine.getDirection());
          }
          if (machine instanceof Miner) {
+            Miner miner = (Miner) machine;
+            if (!miner.isActiveForAnimation()) {
+               BufferedImage t = textures.getRotated("miner_f0", machine.getDirection());
+               return (t != null) ? t : textures.getRotated("miner", machine.getDirection());
+            }
             int f = Math.floorMod(frame / 15, 2);
             BufferedImage t = textures.getRotated("miner_f" + f, machine.getDirection());
             return (t != null) ? t : textures.getRotated("miner", machine.getDirection());
          }
          if (machine instanceof Smelter) {
+            Smelter smelter = (Smelter) machine;
+            if (!smelter.isActiveForAnimation()) {
+               BufferedImage t = textures.getRotated("smelter_f0", machine.getDirection());
+               return (t != null) ? t : textures.getRotated("smelter", machine.getDirection());
+            }
             int f = Math.floorMod(frame / 10, 3);
             BufferedImage t = textures.getRotated("smelter_f" + f, machine.getDirection());
             return (t != null) ? t : textures.getRotated("smelter", machine.getDirection());
