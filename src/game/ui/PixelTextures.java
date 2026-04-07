@@ -52,11 +52,11 @@ public class PixelTextures {
       cache.put("item_iron_plate", generatePlateTexture(new Color(180, 180, 200), new Color(140, 140, 160)));
       cache.put("item_copper_plate", generatePlateTexture(new Color(210, 140, 80), new Color(170, 110, 60)));
       cache.put("item_iron_gear", generateGearTexture());
-      cache.put("item_conveyor_belt", generateItemTexture(new Color(100, 100, 110), new Color(70, 70, 80)));
-      cache.put("item_miner_kit", generateItemTexture(new Color(200, 180, 60), new Color(160, 140, 40)));
-      cache.put("item_smelter_kit", generateItemTexture(new Color(220, 100, 50), new Color(180, 70, 30)));
-      cache.put("item_grabber_kit", generateItemTexture(new Color(120, 200, 120), new Color(80, 160, 80)));
-      cache.put("item_forge_kit", generateItemTexture(new Color(145, 120, 85), new Color(105, 85, 60)));
+      cache.put("item_conveyor_belt", generateConveyorBeltItemIcon());
+      cache.put("item_miner_kit", generateMinerKitIcon());
+      cache.put("item_smelter_kit", generateSmelterKitIcon());
+      cache.put("item_grabber_kit", generateGrabberKitIcon());
+      cache.put("item_forge_kit", generateForgeKitIcon());
       cache.put("grabber", generateGrabberTexture());
       generateConveyorBeltFrames();
       generateMinerFrames();
@@ -67,8 +67,8 @@ public class PixelTextures {
    }
 
    private void generateConveyorBeltFrames() {
-      Color bg    = new Color(0x44, 0x44, 0x44);
-      Color rail  = new Color(0x88, 0x88, 0x88);
+      Color bg = new Color(0x44, 0x44, 0x44);
+      Color rail = new Color(0x88, 0x88, 0x88);
       Color arrow = new Color(0xFF, 0xFF, 0xFF);
       Color spare = new Color(0xAA, 0xAA, 0xAA);
       Color[] pal = { bg, rail, arrow, spare };
@@ -123,7 +123,7 @@ public class PixelTextures {
    }
 
    private void generateMinerFrames() {
-      Color bg   = new Color(0, 0, 0, 0);
+      Color bg = new Color(0, 0, 0, 0);
       Color body = new Color(220, 140, 30);
       Color dark = new Color(170, 100, 20);
       Color pick = new Color(180, 180, 190);
@@ -155,7 +155,7 @@ public class PixelTextures {
    }
 
    private void generateSmelterFrames() {
-      Color bg   = new Color(0, 0, 0, 0);
+      Color bg = new Color(0, 0, 0, 0);
       Color body = new Color(160, 50, 40);
       Color dark = new Color(120, 30, 25);
       // Same pixel layout as generateSmelterDirectional, only fire color cycles
@@ -169,52 +169,52 @@ public class PixelTextures {
             { 0, 2, 1, 1, 1, 2, 0, 0 },
             { 0, 0, 0, 0, 0, 0, 0, 0 },
       };
-      cache.put("smelter_f0", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(255, 180, 30) }));
-      cache.put("smelter_f1", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(230, 100, 20) }));
-      cache.put("smelter_f2", buildFromPalette(map, new Color[]{ bg, body, dark, new Color(255, 140, 10) }));
+      cache.put("smelter_f0", buildFromPalette(map, new Color[] { bg, body, dark, new Color(255, 180, 30) }));
+      cache.put("smelter_f1", buildFromPalette(map, new Color[] { bg, body, dark, new Color(230, 100, 20) }));
+      cache.put("smelter_f2", buildFromPalette(map, new Color[] { bg, body, dark, new Color(255, 140, 10) }));
    }
 
-      private void generateForgeFrames() {
+   private void generateForgeFrames() {
       Color bg = new Color(0, 0, 0, 0);
       Color body = new Color(105, 85, 70);
       Color dark = new Color(70, 55, 45);
       Color chimney = new Color(95, 95, 95);
 
       int[][] idle = {
-         { 0, 0, 4, 0, 0, 0, 0, 0 },
-         { 0, 2, 1, 1, 1, 2, 0, 0 },
-         { 0, 1, 1, 1, 1, 1, 0, 0 },
-         { 0, 1, 2, 2, 1, 1, 3, 3 },
-         { 0, 1, 2, 2, 1, 1, 3, 3 },
-         { 0, 1, 1, 1, 1, 1, 0, 0 },
-         { 0, 2, 1, 1, 1, 2, 0, 0 },
-         { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 4, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 1, 1, 1, 1, 1, 0, 0 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 1, 1, 1, 1, 0, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
       };
 
       int[][] activePulse = {
-         { 0, 0, 4, 0, 0, 0, 0, 0 },
-         { 0, 2, 1, 1, 1, 2, 0, 0 },
-         { 0, 1, 1, 1, 1, 1, 3, 0 },
-         { 0, 1, 2, 2, 1, 1, 3, 3 },
-         { 0, 1, 2, 2, 1, 1, 3, 3 },
-         { 0, 1, 1, 1, 1, 1, 3, 0 },
-         { 0, 2, 1, 1, 1, 2, 0, 0 },
-         { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 4, 0, 0, 0, 0, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 1, 1, 1, 1, 1, 3, 0 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 2, 2, 1, 1, 3, 3 },
+            { 0, 1, 1, 1, 1, 1, 3, 0 },
+            { 0, 2, 1, 1, 1, 2, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
       };
 
       cache.put("forge_idle", buildFromPalette(idle,
-         new Color[]{ bg, body, dark, new Color(150, 60, 30), chimney }));
+            new Color[] { bg, body, dark, new Color(150, 60, 30), chimney }));
       cache.put("forge_f0", buildFromPalette(idle,
-         new Color[]{ bg, body, dark, new Color(245, 135, 45), chimney }));
+            new Color[] { bg, body, dark, new Color(245, 135, 45), chimney }));
       cache.put("forge_f1", buildFromPalette(activePulse,
-         new Color[]{ bg, body, dark, new Color(255, 185, 60), chimney }));
-      }
+            new Color[] { bg, body, dark, new Color(255, 185, 60), chimney }));
+   }
 
    private void generateGrabberFrames() {
-      Color bg   = new Color(0, 0, 0, 0);
+      Color bg = new Color(0, 0, 0, 0);
       Color body = new Color(60, 120, 210);
       Color dark = new Color(40, 80, 160);
-      Color tip  = new Color(230, 80, 30);
+      Color tip = new Color(230, 80, 30);
       Color[] pal = { bg, body, dark, tip };
       // Frame 0: arm retracted (tip only at col 4)
       int[][] f0 = {
@@ -272,14 +272,14 @@ public class PixelTextures {
       Color panel = new Color(96, 106, 118);
       Color hazard = new Color(216, 170, 74);
       int[][] map = {
-         { 1, 1, 1, 1, 1, 1, 1, 1 },
-         { 1, 2, 3, 2, 2, 3, 2, 1 },
-         { 1, 3, 0, 0, 0, 0, 3, 1 },
-         { 1, 2, 0, 2, 2, 0, 2, 1 },
-         { 1, 2, 0, 2, 2, 0, 2, 1 },
-         { 1, 3, 0, 0, 0, 0, 3, 1 },
-         { 1, 2, 3, 2, 2, 3, 2, 1 },
-         { 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 2, 3, 2, 2, 3, 2, 1 },
+            { 1, 3, 0, 0, 0, 0, 3, 1 },
+            { 1, 2, 0, 2, 2, 0, 2, 1 },
+            { 1, 2, 0, 2, 2, 0, 2, 1 },
+            { 1, 3, 0, 0, 0, 0, 3, 1 },
+            { 1, 2, 3, 2, 2, 3, 2, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1 },
       };
       return buildFromPalette(map, new Color[] { center, asphalt, panel, hazard });
    }
@@ -340,16 +340,16 @@ public class PixelTextures {
 
       // Nose cone and right-side shading.
       Polygon noseCone = new Polygon(
-         new int[] { centerX, centerX - 6, centerX + 6 },
-         new int[] { 1, bodyTop + 2, bodyTop + 2 },
-         3);
+            new int[] { centerX, centerX - 6, centerX + 6 },
+            new int[] { 1, bodyTop + 2, bodyTop + 2 },
+            3);
       g.setColor(nose);
       g.fillPolygon(noseCone);
 
       Polygon noseRightShade = new Polygon(
-         new int[] { centerX, centerX + 6, centerX + 2 },
-         new int[] { 2, bodyTop + 2, bodyTop + 2 },
-         3);
+            new int[] { centerX, centerX + 6, centerX + 2 },
+            new int[] { 2, bodyTop + 2, bodyTop + 2 },
+            3);
       g.setColor(noseShade);
       g.fillPolygon(noseRightShade);
 
@@ -370,13 +370,13 @@ public class PixelTextures {
 
       // Stabilizer fins.
       Polygon leftFin = new Polygon(
-         new int[] { centerX - 5, centerX - 10, centerX - 5 },
-         new int[] { 20, 25, 24 },
-         3);
+            new int[] { centerX - 5, centerX - 10, centerX - 5 },
+            new int[] { 20, 25, 24 },
+            3);
       Polygon rightFin = new Polygon(
-         new int[] { centerX + 5, centerX + 10, centerX + 5 },
-         new int[] { 20, 25, 24 },
-         3);
+            new int[] { centerX + 5, centerX + 10, centerX + 5 },
+            new int[] { 20, 25, 24 },
+            3);
       g.setColor(fin);
       g.fillPolygon(leftFin);
       g.fillPolygon(rightFin);
@@ -397,23 +397,23 @@ public class PixelTextures {
       int f = Math.floorMod(frame, 4);
 
       Polygon outerFlame = new Polygon(
-         new int[] { centerX - 4, centerX + 4, centerX },
-         new int[] { flameTopY, flameTopY, flameTopY + outerLength[f] },
-         3);
+            new int[] { centerX - 4, centerX + 4, centerX },
+            new int[] { flameTopY, flameTopY, flameTopY + outerLength[f] },
+            3);
       g.setColor(flameOuter);
       g.fillPolygon(outerFlame);
 
       Polygon midFlame = new Polygon(
-         new int[] { centerX - 3, centerX + 3, centerX },
-         new int[] { flameTopY + 1, flameTopY + 1, flameTopY + midLength[f] },
-         3);
+            new int[] { centerX - 3, centerX + 3, centerX },
+            new int[] { flameTopY + 1, flameTopY + 1, flameTopY + midLength[f] },
+            3);
       g.setColor(flameMid);
       g.fillPolygon(midFlame);
 
       Polygon innerFlame = new Polygon(
-         new int[] { centerX - 2, centerX + 2, centerX },
-         new int[] { flameTopY + 1, flameTopY + 1, flameTopY + innerLength[f] },
-         3);
+            new int[] { centerX - 2, centerX + 2, centerX },
+            new int[] { flameTopY + 1, flameTopY + 1, flameTopY + innerLength[f] },
+            3);
       g.setColor(flameInner);
       g.fillPolygon(innerFlame);
 
@@ -505,12 +505,15 @@ public class PixelTextures {
       return buildFromPalette(map, new Color[] { base, dark, coal, glint });
    }
 
-   // --- Conveyor Belt: Klarer Richtungspfeil (Basis-Richtung = RIGHT, Pfeil nach rechts) ---
-   // Palette: 0=#444444 (Hintergrund), 1=#888888 (Schiene), 2=#FFFFFF (Pfeil), 3=#AAAAAA (unused)
-   // Das Sprite zeigt nach RECHTS (Standard). getRotated() dreht es für andere Richtungen.
+   // --- Conveyor Belt: Klarer Richtungspfeil (Basis-Richtung = RIGHT, Pfeil nach
+   // rechts) ---
+   // Palette: 0=#444444 (Hintergrund), 1=#888888 (Schiene), 2=#FFFFFF (Pfeil),
+   // 3=#AAAAAA (unused)
+   // Das Sprite zeigt nach RECHTS (Standard). getRotated() dreht es für andere
+   // Richtungen.
    private BufferedImage generateConveyorBelt() {
-      Color bg    = new Color(0x44, 0x44, 0x44);
-      Color rail  = new Color(0x88, 0x88, 0x88);
+      Color bg = new Color(0x44, 0x44, 0x44);
+      Color rail = new Color(0x88, 0x88, 0x88);
       Color arrow = new Color(0xFF, 0xFF, 0xFF);
       Color spare = new Color(0xAA, 0xAA, 0xAA);
       // Arrow pointing RIGHT (base direction = RIGHT, matches getRotated convention)
@@ -603,6 +606,107 @@ public class PixelTextures {
       return buildFromPalette(map, new Color[] { bg, body, dark, skin });
    }
 
+   // --- Miner Kit: Diagonal pickaxe (silver head, golden handle) ---
+   private BufferedImage generateMinerKitIcon() {
+      Color bg = new Color(0, 0, 0, 0);
+      Color handle = new Color(200, 155, 40); // golden handle
+      Color hdark = new Color(135, 100, 20); // dark handle shadow
+      Color head = new Color(185, 185, 195); // silver pick head
+      // 0=transparent, 1=handle, 2=dark handle, 3=silver head
+      int[][] map = {
+            { 0, 0, 0, 0, 0, 3, 3, 0 },
+            { 0, 0, 0, 0, 3, 1, 3, 0 },
+            { 0, 0, 0, 3, 1, 0, 0, 0 },
+            { 0, 0, 1, 2, 0, 0, 0, 0 },
+            { 0, 1, 2, 0, 0, 0, 0, 0 },
+            { 1, 2, 0, 0, 0, 0, 0, 0 },
+            { 1, 1, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      return buildFromPalette(map, new Color[] { bg, handle, hdark, head });
+   }
+
+   // --- Smelter Kit: Furnace body with rising flame ---
+   private BufferedImage generateSmelterKitIcon() {
+      Color bg = new Color(0, 0, 0, 0);
+      Color body = new Color(150, 45, 35); // dark red furnace body
+      Color dark = new Color(95, 25, 20); // darker interior
+      Color fire = new Color(240, 130, 30); // orange fire
+      // 0=transparent, 1=red body, 2=dark interior, 3=fire
+      int[][] map = {
+            { 0, 0, 0, 3, 3, 0, 0, 0 },
+            { 0, 0, 3, 3, 3, 3, 0, 0 },
+            { 0, 1, 1, 1, 1, 1, 1, 0 },
+            { 0, 1, 2, 2, 2, 2, 1, 0 },
+            { 0, 1, 3, 3, 3, 3, 1, 0 },
+            { 0, 1, 2, 2, 2, 2, 1, 0 },
+            { 0, 1, 1, 1, 1, 1, 1, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      return buildFromPalette(map, new Color[] { bg, body, dark, fire });
+   }
+
+   // --- Grabber Kit: L-shaped arm with orange claw tip ---
+   private BufferedImage generateGrabberKitIcon() {
+      Color bg = new Color(0, 0, 0, 0);
+      Color body = new Color(60, 120, 210); // blue body
+      Color dark = new Color(35, 75, 155); // dark blue shadow
+      Color claw = new Color(230, 80, 30); // orange-red claw
+      // 0=transparent, 1=blue body, 2=dark body, 3=orange claw
+      int[][] map = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 1, 2, 0, 0, 0, 0, 0 },
+            { 0, 1, 2, 0, 0, 0, 0, 0 },
+            { 0, 1, 1, 1, 1, 0, 0, 0 },
+            { 0, 0, 0, 1, 1, 1, 3, 0 },
+            { 0, 0, 0, 0, 1, 3, 3, 0 },
+            { 0, 0, 0, 0, 3, 3, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      return buildFromPalette(map, new Color[] { bg, body, dark, claw });
+   }
+
+   // --- Forge Kit: Anvil silhouette (wide top, narrow waist, broad base) ---
+   private BufferedImage generateForgeKitIcon() {
+      Color bg = new Color(0, 0, 0, 0);
+      Color body = new Color(145, 120, 85); // brown anvil body
+      Color dark = new Color(90, 70, 50); // dark shadow
+      Color hi = new Color(200, 175, 130); // highlight edge
+      // 0=transparent, 1=brown, 2=dark, 3=highlight
+      int[][] map = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 1, 1, 1, 1, 0, 0 },
+            { 0, 3, 1, 1, 1, 1, 3, 0 },
+            { 0, 1, 1, 2, 2, 1, 1, 0 },
+            { 0, 0, 1, 1, 1, 1, 0, 0 },
+            { 0, 0, 1, 2, 2, 1, 0, 0 },
+            { 0, 0, 1, 1, 1, 1, 0, 0 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      return buildFromPalette(map, new Color[] { bg, body, dark, hi });
+   }
+
+   // --- Conveyor Belt Item: Belt track with white directional arrow and rollers
+   // ---
+   private BufferedImage generateConveyorBeltItemIcon() {
+      Color bg = new Color(0, 0, 0, 0);
+      Color rail = new Color(80, 80, 90); // dark rail
+      Color arrow = new Color(220, 220, 230); // light arrow
+      Color roller = new Color(130, 130, 140); // medium roller
+      // 0=transparent, 1=rail, 2=arrow, 3=roller
+      int[][] map = {
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+            { 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 0, 3, 0, 0, 3, 0, 1 },
+            { 1, 0, 0, 2, 0, 0, 0, 1 },
+            { 1, 0, 0, 2, 2, 0, 0, 1 },
+            { 1, 0, 3, 0, 0, 3, 0, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 0, 0, 0, 0, 0, 0, 0, 0 },
+      };
+      return buildFromPalette(map, new Color[] { bg, rail, arrow, roller });
+   }
+
    // --- Generische Erz-Item-Textur ---
    private BufferedImage generateItemTexture(Color main, Color shadow) {
       Color bg = new Color(0, 0, 0, 0);
@@ -656,13 +760,14 @@ public class PixelTextures {
       return buildFromPalette(map, new Color[] { bg, main, dark, hi });
    }
 
-   // --- Grabber: Blaue Basis (Eingang), roter/oranger Greiferarm (Ausgang nach RECHTS) ---
+   // --- Grabber: Blaue Basis (Eingang), roter/oranger Greiferarm (Ausgang nach
+   // RECHTS) ---
    // Palette: 0=transparent, 1=blue body, 2=dark blue, 3=red/orange tip
    private BufferedImage generateGrabberTexture() {
-      Color bg   = new Color(0, 0, 0, 0);
-      Color body = new Color(60, 120, 210);   // blue input side
-      Color dark = new Color(40, 80, 160);    // dark blue shading
-      Color tip  = new Color(230, 80, 30);    // red-orange output arm/tip
+      Color bg = new Color(0, 0, 0, 0);
+      Color body = new Color(60, 120, 210); // blue input side
+      Color dark = new Color(40, 80, 160); // dark blue shading
+      Color tip = new Color(230, 80, 30); // red-orange output arm/tip
       // Body on left (input), arm extends right (output). Base direction = RIGHT.
       int[][] map = {
             { 0, 0, 0, 0, 0, 0, 0, 0 },

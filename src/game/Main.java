@@ -77,7 +77,9 @@ public class Main {
          System.out.println("[Main] Spielstand geladen.");
       } else {
          map.generateResources(0.15); // 15% der Tiles sind Ressourcen
-         addStarterInventory(player);
+         if (gameMode == GameMode.CREATIVE) {
+            addStarterInventory(player);
+         }
          rocketObjective = createNewRocketObjective(map);
       }
 
