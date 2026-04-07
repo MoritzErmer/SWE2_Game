@@ -71,7 +71,7 @@ class MinerAndGrabberFuelTest {
       Tile tile = new Tile(TileType.IRON_DEPOSIT);
       Smelter smelter = new Smelter(tile);
       tile.setMachine(smelter);
-      smelter.setInputBuffer(new ItemStack(ItemType.IRON_ORE, 1));
+      smelter.setInputBuffer(new ItemStack(ItemType.IRON_ORE, 2));
 
       smelter.tick();
       assertFalse(smelter.hasOutput(), "Smelter must not produce without coal.");
